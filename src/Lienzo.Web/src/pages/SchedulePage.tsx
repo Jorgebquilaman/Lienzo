@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  ChevronLeft, ChevronRight, Building2, Repeat, CalendarDays, User, Clock, MapPin, Tag, Calendar,
+  ChevronLeft, ChevronRight, Building2, Repeat, CalendarDays, User, Clock, MapPin, Tag, Calendar, Plus,
 } from 'lucide-react';
 import { addDays, subDays, format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { Badge } from '@/components/ui/Badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody } from '@/components/ui/Dialog';
 import { getStatusLabel, getStatusColor } from '@/lib/utils';
+import { ReservationModal } from '@/components/classrooms/ReservationModal';
 import type { Building, Classroom, Reservation } from '@/types';
 
 const DAY_LABELS: Record<string, string> = {
@@ -56,6 +57,7 @@ function toMinutes(time: string): number {
 }
 
 export default function SchedulePage() {
+  const queryClient = useQueryClient();
   const today = new Date();
   const [currentDate, setCurrentDate] = useState(today);
   const [buildingId, setBuildingId] = useState('');
@@ -136,6 +138,23 @@ export default function SchedulePage() {
     colorMode === 'period' && r.actividadPeriodo
       ? periodColorMap[r.actividadPeriodo] || 'bg-primary-400'
       : STATUS_COLORS[r.status] || 'bg-primary-400';
+
+  const [createSlot, setCreateSlot] = useState<{ classroom: Classroom; startTime: string; endTime: string } | null>(null);
+
+  const handleTimelineClick = (e: React.MouseEvent<HTMLDivElement>, classroom: Classroom) => {
+    if ((e.target as HTMLElement).closest('[data-reservation-id]')) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const pct = x / rect.width;
+    const minutesFromStart = pct * TOTAL_MINUTES;
+    const totalMinutes = MIN_TIME + minutesFromStart;
+    const snappedHour = Math.floor(totalMinutes / 60);
+    const maxHour = isSaturday ? 15 : 21;
+    if (snappedHour < 7 || snappedHour >= maxHour) return;
+    const startStr = `${String(snappedHour).padStart(2, '0')}:00`;
+    const endStr = `${String(snappedHour + 1).padStart(2, '0')}:00`;
+    setCreateSlot({ classroom, startTime: startStr, endTime: endStr });
+  };
 
   return (
     <div className="space-y-6">
@@ -260,14 +279,25 @@ export default function SchedulePage() {
                             (P{classroom.floor})
                           </span>
                         </div>
-                        <div className="flex-1 relative min-h-[48px]">
+                        <div
+                          className="flex-1 relative min-h-[48px] cursor-pointer"
+                          onClick={(e) => handleTimelineClick(e, classroom)}
+                        >
                           {visibleHours.map((h) => (
                               <div
                                 key={h}
-                                className="absolute top-0 bottom-0 border-l border-primary-100"
+                                className="absolute top-0 bottom-0 border-l border-primary-100 pointer-events-none"
                                 style={{ left: `${((h - 7) / 15) * 100}%`, width: `${(1 / 15) * 100}%` }}
                               />
                           ))}
+                          {/* Empty state hint when no reservations */}
+                          {classroomReservations.length === 0 && (
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                              <div className="flex items-center gap-1 text-xs text-accent-500 bg-white/80 rounded-full px-2 py-0.5 shadow-sm border border-accent-200">
+                                <Plus className="h-3 w-3" /> Reservar
+                              </div>
+                            </div>
+                          )}
                           {classroomReservations.map((r) => {
                             const rs = toMinutes(r.startTime);
                             const re = toMinutes(r.endTime);
@@ -276,9 +306,10 @@ export default function SchedulePage() {
                             return (
                               <div
                                 key={r.id}
+                                data-reservation-id={r.id}
                                 className={`absolute top-1 bottom-1 rounded px-1.5 py-1 text-xs text-white overflow-hidden cursor-pointer hover:opacity-90 ${getBarColor(r)}`}
                                 style={{ left: `${left}%`, width: `${width}%` }}
-                                onClick={() => setSelectedReservation(r)}
+                                onClick={(e) => { e.stopPropagation(); setSelectedReservation(r); }}
                                 title={`${r.title} · ${r.classroomName} (${r.startTime}-${r.endTime})`}
                               >
                                 <span className="truncate block leading-tight font-medium">
@@ -320,6 +351,19 @@ export default function SchedulePage() {
           ))
         )}
       </div>
+
+      <ReservationModal
+        open={!!createSlot}
+        onOpenChange={(open) => { if (!open) setCreateSlot(null); }}
+        classroom={createSlot?.classroom}
+        defaultDate={dateStr}
+        defaultStartTime={createSlot?.startTime}
+        defaultEndTime={createSlot?.endTime}
+        onSuccess={() => {
+          setCreateSlot(null);
+          queryClient.invalidateQueries({ queryKey: ['schedule', dateStr, buildingId, classroomId] });
+        }}
+      />
 
       <Dialog open={!!selectedReservation} onOpenChange={(open) => { if (!open) setSelectedReservation(null); }}>
         {selectedReservation && (

@@ -71,9 +71,12 @@ interface ReservationModalProps {
   classroom?: Classroom;
   reservation?: Reservation;
   onSuccess?: () => void;
+  defaultDate?: string;
+  defaultStartTime?: string;
+  defaultEndTime?: string;
 }
 
-export function ReservationModal({ open, onOpenChange, classroom, reservation, onSuccess }: ReservationModalProps) {
+export function ReservationModal({ open, onOpenChange, classroom, reservation, onSuccess, defaultDate, defaultStartTime, defaultEndTime }: ReservationModalProps) {
   const [conflict, setConflict] = useState<{ hasConflict: boolean } | null>(null);
   const [checkingConflict, setCheckingConflict] = useState(false);
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
@@ -98,15 +101,15 @@ export function ReservationModal({ open, onOpenChange, classroom, reservation, o
   useEffect(() => {
     if (open) {
       reset({
-        date: reservation ? reservation.date.split('T')[0] : (() => {
+        date: reservation ? reservation.date.split('T')[0] : defaultDate || (() => {
           const now = new Date();
           const y = now.getFullYear();
           const m = String(now.getMonth() + 1).padStart(2, '0');
           const d = String(now.getDate()).padStart(2, '0');
           return `${y}-${m}-${d}`;
         })(),
-        startTime: reservation ? reservation.startTime.slice(0, 5) : '08:00',
-        endTime: reservation ? reservation.endTime.slice(0, 5) : '10:00',
+        startTime: reservation ? reservation.startTime.slice(0, 5) : defaultStartTime || '08:00',
+        endTime: reservation ? reservation.endTime.slice(0, 5) : defaultEndTime || '10:00',
         title: reservation ? reservation.title : '',
         description: reservation ? reservation.description || '' : '',
         isRecurring: false,
@@ -116,7 +119,7 @@ export function ReservationModal({ open, onOpenChange, classroom, reservation, o
       setSelectedActividadId(reservation ? (reservation as any).actividadId || '' : '');
       setConflict(null);
     }
-  }, [open, reservation, reset]);
+  }, [open, reservation, defaultDate, defaultStartTime, defaultEndTime, reset]);
 
   const { data: holidaysResponse } = useQuery({
     queryKey: ['holidays'],
