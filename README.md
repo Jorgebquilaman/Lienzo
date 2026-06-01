@@ -123,6 +123,291 @@ npm run dev
 
 The frontend will be available at `http://localhost:5173` with API proxy to `http://localhost:5000`.
 
+## Deployment on Debian
+
+### 1. Server Prerequisites
+
+```bash
+# Update system
+sudo apt update && sudo apt upgrade -y
+
+# Install .NET 9 SDK
+wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
+chmod +x dotnet-install.sh
+sudo ./dotnet-install.sh --channel 9.0 --install-dir /usr/share/dotnet
+sudo ln -sf /usr/share/dotnet/dotnet /usr/local/bin/dotnet
+dotnet --version  # Verify
+
+# Install Node.js 20+
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
+sudo apt install -y nodejs
+node --version   # Verify
+
+# Install PostgreSQL 16
+sudo apt install -y postgresql-16 postgresql-client-16
+sudo systemctl enable --now postgresql
+
+# Install Nginx
+sudo apt install -y nginx
+sudo systemctl enable --now nginx
+
+# Install build tools
+sudo apt install -y git curl gnupg build-essential
+```
+
+### 2. Database Setup
+
+```bash
+# Create database and user
+sudo -u postgres psql -c "CREATE USER lienzo WITH PASSWORD 'TuPasswordSegura';"
+sudo -u postgres psql -c "CREATE DATABASE lienzo OWNER lienzo;"
+sudo -u postgres psql -c "ALTER USER lienzo CREATEDB;"
+```
+
+### 3. Clone and Configure the Application
+
+```bash
+# Clone the repository
+cd /opt
+sudo git clone https://github.com/Jorgebquilaman/Lienzo.git
+sudo chown -R $USER:$USER Lienzo
+cd Lienzo
+
+# Create production appsettings
+cat > src/Lienzo.API/appsettings.Production.json << 'EOF'
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Port=5432;Database=lienzo;Username=lienzo;Password=TuPasswordSegura"
+  },
+  "JwtSettings": {
+    "Secret": "UnSecretKeySeguroYLargoDeAlMenos32Caracteres!",
+    "Issuer": "LienzoAPI",
+    "Audience": "LienzoClient",
+    "ExpirationInMinutes": 60,
+    "RefreshTokenExpirationInDays": 7
+  },
+  "Serilog": {
+    "MinimumLevel": { "Default": "Information" },
+    "WriteTo": [
+      { "Name": "Console" },
+      {
+        "Name": "File",
+        "Args": {
+          "path": "/var/log/lienzo/api-.log",
+          "rollingInterval": "Day",
+          "retainedFileCountLimit": 30
+        }
+      }
+    ]
+  }
+}
+EOF
+
+# Build backend
+cd src/Lienzo.API
+dotnet publish -c Release -o /opt/Lienzo/publish
+
+# Apply migrations and seed data
+export ASPNETCORE_ENVIRONMENT=Production
+export ASPNETCORE_URLS="http://0.0.0.0:5002"
+dotnet /opt/Lienzo/publish/Lienzo.API.dll --seed
+```
+
+### 4. Systemd Service for the API
+
+```bash
+sudo tee /etc/systemd/system/lienzo-api.service > /dev/null << 'EOF'
+[Unit]
+Description=Lienzo Classroom Reservation API
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/Lienzo/publish
+ExecStart=/usr/share/dotnet/dotnet /opt/Lienzo/publish/Lienzo.API.dll
+Restart=always
+RestartSec=10
+Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=ASPNETCORE_URLS=http://0.0.0.0:5002
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Create log directory
+sudo mkdir -p /var/log/lienzo
+sudo chown www-data:www-data /var/log/lienzo
+
+# Start service
+sudo systemctl daemon-reload
+sudo systemctl enable --now lienzo-api
+sudo systemctl status lienzo-api  # Verify
+```
+
+### 5. Build and Deploy the Frontend
+
+```bash
+# Build frontend
+cd /opt/Lienzo/src/Lienzo.Web
+npm install
+npm run build
+
+# Copy to web root
+sudo rm -rf /var/www/lienzo
+sudo cp -r dist /var/www/lienzo
+sudo chown -R www-data:www-data /var/www/lienzo
+```
+
+### 6. Configure Nginx as Reverse Proxy
+
+```bash
+sudo tee /etc/nginx/sites-available/lienzo > /dev/null << 'EOF'
+server {
+    listen 80;
+    server_name lienzo.tudominio.com;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name lienzo.tudominio.com;
+
+    # SSL certificates (install via certbot or provide your own)
+    ssl_certificate /etc/letsencrypt/live/lienzo.tudominio.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/lienzo.tudominio.com/privkey.pem;
+
+    root /var/www/lienzo;
+    index index.html;
+
+    # Frontend static files
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # API proxy
+    location /api/ {
+        proxy_pass http://127.0.0.1:5002;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # SignalR WebSocket support
+    location /hubs/ {
+        proxy_pass http://127.0.0.1:5002;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 86400;
+    }
+
+    # Uploads (classroom images)
+    location /uploads/ {
+        proxy_pass http://127.0.0.1:5002;
+        proxy_cache_valid 200 7d;
+        expires 7d;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Swagger (restrict in production if needed)
+    location /swagger/ {
+        proxy_pass http://127.0.0.1:5002;
+        # Uncomment to restrict access to internal IPs
+        # allow 10.0.0.0/8;
+        # allow 172.16.0.0/12;
+        # allow 192.168.0.0/16;
+        # deny all;
+    }
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # Gzip
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml text/javascript image/svg+xml;
+    gzip_min_length 1000;
+    gzip_comp_level 6;
+
+    client_max_body_size 10M;
+}
+EOF
+
+# Enable site and reload
+sudo ln -sf /etc/nginx/sites-available/lienzo /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t  # Verify config
+sudo systemctl reload nginx
+```
+
+### 7. SSL Certificate with Let's Encrypt (optional but recommended)
+
+```bash
+sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d lienzo.tudominio.com
+```
+
+### 8. Firewall Configuration
+
+```bash
+sudo apt install -y ufw
+sudo ufw allow OpenSSH
+sudo ufw allow 'Nginx Full'
+sudo ufw --force enable
+sudo ufw status  # Verify
+```
+
+### 9. Verify Deployment
+
+```bash
+# Check API is running
+curl -s http://127.0.0.1:5002/api/auth/me
+
+# Check frontend
+curl -s -o /dev/null -w "%{http_code}" http://localhost/
+# Should return 200
+```
+
+### 10. Updating the Application
+
+```bash
+cd /opt/Lienzo
+git pull origin main
+
+# Backend
+cd src/Lienzo.API
+dotnet publish -c Release -o /opt/Lienzo/publish
+sudo systemctl restart lienzo-api
+
+# Frontend
+cd /opt/Lienzo/src/Lienzo.Web
+npm install && npm run build
+sudo rm -rf /var/www/lienzo && sudo cp -r dist /var/www/lienzo
+sudo chown -R www-data:www-data /var/www/lienzo
+```
+
+### Troubleshooting
+
+| Issue | Check |
+|-------|-------|
+| API won't start | `sudo journalctl -u lienzo-api -n 50 --no-pager` |
+| DB connection error | Verify credentials in `appsettings.Production.json` and PostgreSQL status |
+| Frontend blank page | Check Nginx error log: `sudo tail -f /var/log/nginx/error.log` |
+| Uploads 404 | Verify `www-data` owns `/opt/Lienzo/publish/wwwroot/uploads` |
+| WebSocket not working | Ensure Nginx proxy has `Upgrade` and `Connection` headers for `/hubs/` |
+
 ## Environment Variables
 
 | Variable | Description | Default |
