@@ -1,0 +1,19 @@
+using Lienzo.Domain.Entities;
+
+namespace Lienzo.Domain.Interfaces;
+
+public interface IUnitOfWork : IDisposable
+{
+    IBuildingRepository Buildings { get; }
+    IClassroomRepository Classrooms { get; }
+    IReservationRepository Reservations { get; }
+    IAnnouncementRepository Announcements { get; }
+    INotificationRepository Notifications { get; }
+    IHolidayRepository Holidays { get; }
+    IPeriodoRepository Periodos { get; }
+    ICarreraRepository Carreras { get; }
+    IActividadRepository Actividades { get; }
+    ITipoPeriodoRepository TiposPeriodo { get; }
+    IRepository<ActividadDocente> ActividadDocentes { get; }
+    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+}

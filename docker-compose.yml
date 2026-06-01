@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: lienzo-db
+    environment:
+      POSTGRES_DB: lienzo
+      POSTGRES_USER: lienzo
+      POSTGRES_PASSWORD: lienzo123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lienzo -d lienzo"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lienzo-network
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: lienzo-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@lienzo.edu
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - lienzo-network
+
+  lienzo-api:
+    build:
+      context: .
+      dockerfile: src/Lienzo.API/Dockerfile
+    container_name: lienzo-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=lienzo;Username=lienzo;Password=lienzo123;
+      JwtSettings__Secret: LienzoSuperSecretKeyForJwtTokenGeneration2024!
+      JwtSettings__Issuer: LienzoAPI
+      JwtSettings__Audience: LienzoClient
+      JwtSettings__ExpirationInMinutes: "60"
+      JwtSettings__RefreshTokenExpirationInDays: "7"
+    ports:
+      - "5000:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - lienzo-network
+
+  lienzo-web:
+    build:
+      context: src/Lienzo.Web
+      dockerfile: Dockerfile
+    container_name: lienzo-web
+    ports:
+      - "3000:80"
+    depends_on:
+      - lienzo-api
+    networks:
+      - lienzo-network
+
+volumes:
+  postgres_data:
+
+networks:
+  lienzo-network:
+    driver: bridge

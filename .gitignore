@@ -1,0 +1,16 @@
+node_modules/
+dist/
+build/
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.vscode/
+.idea/
+*.log
+.env
+appsettings.*.local.json
+wwwroot/uploads/
+__pycache__/
+*.pyc

@@ -1,0 +1,51 @@
+using AutoMapper;
+using Lienzo.Application.Common.Models;
+using Lienzo.Application.DTOs;
+using Lienzo.Domain.Entities;
+using Lienzo.Domain.Enums;
+using Lienzo.Domain.Interfaces;
+using MediatR;
+
+namespace Lienzo.Application.Commands.CreateClassroom;
+
+public record CreateClassroomCommand(CreateClassroomRequest Request) : IRequest<Result<ClassroomDto>>;
+
+public class CreateClassroomCommandHandler : IRequestHandler<CreateClassroomCommand, Result<ClassroomDto>>
+{
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IMapper _mapper;
+
+    public CreateClassroomCommandHandler(IUnitOfWork unitOfWork, IMapper mapper)
+    {
+        _unitOfWork = unitOfWork;
+        _mapper = mapper;
+    }
+
+    public async Task<Result<ClassroomDto>> Handle(CreateClassroomCommand command, CancellationToken cancellationToken)
+    {
+        var building = await _unitOfWork.Buildings.GetByIdAsync(command.Request.BuildingId);
+        if (building is null)
+            return Result<ClassroomDto>.Failure("Building not found", "NOT_FOUND");
+
+        if (!Enum.TryParse<ClassroomType>(command.Request.Type, true, out var type))
+            return Result<ClassroomDto>.Failure("Invalid classroom type", "INVALID_TYPE");
+
+        var classroom = new Classroom(
+            command.Request.Name,
+            command.Request.BuildingId,
+            command.Request.Floor,
+            command.Request.Capacity,
+            type,
+            command.Request.Features,
+            command.Request.ImageUrl);
+
+        building.AddClassroom(classroom);
+        _unitOfWork.Buildings.Update(building);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var dto = _mapper.Map<ClassroomDto>(classroom);
+        dto = dto with { BuildingName = building.Name };
+
+        return Result<ClassroomDto>.Success(dto);
+    }
+}
