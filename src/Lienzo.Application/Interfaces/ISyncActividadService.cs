@@ -10,6 +10,7 @@ public class ExternalActividadInfo
     public int PeriodoId { get; init; }
     public int Edificacion { get; init; }
     public int? PropuestaId { get; init; }
+    public string? PropuestaCodigo { get; init; }
     public List<string> DocenteNames { get; set; } = [];
 }
 

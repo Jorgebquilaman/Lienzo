@@ -35,8 +35,11 @@ public class SyncActividadesCommandHandler : IRequestHandler<SyncActividadesComm
             .ToDictionary(p => p.CodigoExterno!.Value);
 
         var carreras = (await _unitOfWork.Carreras.GetAllAsync()).ToList();
-        var carrerasByCodigo = carreras.Where(c => c.CodigoExterno.HasValue)
+        var carrerasByCodigoExt = carreras.Where(c => c.CodigoExterno.HasValue)
             .ToDictionary(c => c.CodigoExterno!.Value);
+        var carrerasByCodigoStr = carreras
+            .Where(c => !string.IsNullOrWhiteSpace(c.Codigo))
+            .ToDictionary(c => c.Codigo, StringComparer.OrdinalIgnoreCase);
         var defaultCarrera = carreras.FirstOrDefault();
         if (defaultCarrera is null)
         {
@@ -95,9 +98,11 @@ public class SyncActividadesCommandHandler : IRequestHandler<SyncActividadesComm
                         continue;
                     }
 
-                    var carrera = ext.PropuestaId.HasValue && carrerasByCodigo.TryGetValue(ext.PropuestaId.Value, out var match)
-                        ? match
-                        : carreras.FirstOrDefault();
+                    var carrera = ext.PropuestaId.HasValue && carrerasByCodigoExt.TryGetValue(ext.PropuestaId.Value, out var matchByExt)
+                        ? matchByExt
+                        : ext.PropuestaCodigo is not null && carrerasByCodigoStr.TryGetValue(ext.PropuestaCodigo, out var matchByStr)
+                            ? matchByStr
+                            : carreras.FirstOrDefault();
                     actividad = new Actividad(
                         ext.ElementoNombre,
                         ext.ElementoCodigo,

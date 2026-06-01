@@ -22,13 +22,14 @@ public class SyncActividadService : ISyncActividadService
         await conn.OpenAsync();
 
         await using var cmd = new NpgsqlCommand(
-            @"SELECT c.comision, c.nombre, e.nombre, e.codigo, pl.periodo_lectivo, p.periodo, COALESCE(esp.edificacion, 0), cp.propuesta
+            @"SELECT c.comision, c.nombre, e.nombre, e.codigo, pl.periodo_lectivo, p.periodo, COALESCE(esp.edificacion, 0), cp.propuesta, sp.codigo
               FROM negocio.sga_comisiones c
               JOIN negocio.sga_periodos_lectivos pl ON pl.periodo_lectivo = c.periodo_lectivo
               JOIN negocio.sga_periodos p ON p.periodo = pl.periodo
               JOIN negocio.sga_elementos e ON e.elemento = c.elemento
               LEFT JOIN negocio.sga_espacios esp ON esp.espacio = c.ubicacion
               LEFT JOIN negocio.sga_comisiones_propuestas cp ON cp.comision = c.comision
+              LEFT JOIN negocio.sga_propuestas sp ON sp.propuesta = cp.propuesta
               WHERE c.estado = 'A'
                 AND p.anio_academico = @anio
               ORDER BY e.nombre, c.nombre",
@@ -52,6 +53,7 @@ public class SyncActividadService : ISyncActividadService
                 PeriodoId = r.GetInt32(5),
                 Edificacion = r.GetInt32(6),
                 PropuestaId = r.IsDBNull(7) ? null : r.GetInt32(7),
+                PropuestaCodigo = r.IsDBNull(8) ? null : r.GetString(8).Trim(),
             });
         }
 
