@@ -162,9 +162,9 @@ export default function AdminActividades() {
   const [syncResult, setSyncResult] = useState<string | null>(null);
 
   const syncMutation = useMutation({
-    mutationFn: () => api.post<{ creados: number; existentes: number; sinPeriodo: number; sinCarrera: number; totalExterno: number }>('/actividades/sync'),
+    mutationFn: () => api.post<{ creados: number; existentes: number; sinPeriodo: number; sinCarrera: number; totalExterno: number; corregidos: number }>('/actividades/sync'),
     onSuccess: (data) => {
-      setSyncResult(`Actividades sincronizadas: ${data.creados} creadas, ${data.existentes} existentes${data.sinPeriodo > 0 ? `, ${data.sinPeriodo} sin período` : ''}${data.sinCarrera > 0 ? `, ${data.sinCarrera} sin carrera` : ''}`);
+      setSyncResult(`Actividades sincronizadas: ${data.creados} creadas, ${data.existentes} existentes, ${data.corregidos} corregidas${data.sinPeriodo > 0 ? `, ${data.sinPeriodo} sin período` : ''}${data.sinCarrera > 0 ? `, ${data.sinCarrera} sin carrera` : ''}`);
       queryClient.invalidateQueries({ queryKey: ['actividades'] });
     },
   });

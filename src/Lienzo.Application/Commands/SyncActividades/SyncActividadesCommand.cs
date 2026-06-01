@@ -9,7 +9,7 @@ namespace Lienzo.Application.Commands.SyncActividades;
 
 public record SyncActividadesCommand(short AnioAcademico) : IRequest<Result<SyncActividadesResult>>;
 
-public record SyncActividadesResult(int Creados, int Existentes, int SinPeriodo, int SinCarrera, int TotalExterno, int DocentesAsignados);
+public record SyncActividadesResult(int Creados, int Existentes, int SinPeriodo, int SinCarrera, int TotalExterno, int DocentesAsignados, int Corregidos);
 
 public class SyncActividadesCommandHandler : IRequestHandler<SyncActividadesCommand, Result<SyncActividadesResult>>
 {
@@ -28,7 +28,7 @@ public class SyncActividadesCommandHandler : IRequestHandler<SyncActividadesComm
     {
         var external = await _syncService.GetActividadesAsync(command.AnioAcademico);
         if (external.Count == 0)
-            return Result<SyncActividadesResult>.Success(new SyncActividadesResult(0, 0, 0, 0, 0, 0));
+            return Result<SyncActividadesResult>.Success(new SyncActividadesResult(0, 0, 0, 0, 0, 0, 0));
 
         var periodos = (await _unitOfWork.Periodos.GetAllAsync()).ToList();
         var periodosByCodigo = periodos.Where(p => p.CodigoExterno.HasValue)
@@ -68,6 +68,16 @@ public class SyncActividadesCommandHandler : IRequestHandler<SyncActividadesComm
         var noPeriodo = 0;
         var noCarrera = 0;
         var docentesAsignados = 0;
+        var corregidos = 0;
+
+        Carrera? ResolveCarrera(ExternalActividadInfo ext)
+        {
+            if (ext.PropuestaId.HasValue && carrerasByCodigoExt.TryGetValue(ext.PropuestaId.Value, out var matchByExt))
+                return matchByExt;
+            if (ext.PropuestaCodigo is not null && carrerasByCodigoStr.TryGetValue(ext.PropuestaCodigo, out var matchByStr))
+                return matchByStr;
+            return carreras.FirstOrDefault();
+        }
 
         foreach (var ext in external)
         {
@@ -77,6 +87,13 @@ public class SyncActividadesCommandHandler : IRequestHandler<SyncActividadesComm
             {
                 actividad = existingAct;
                 existed++;
+
+                var correctCarrera = ResolveCarrera(ext);
+                if (correctCarrera is not null && actividad.CarreraId != correctCarrera.Id)
+                {
+                    actividad.SetCarrera(correctCarrera.Id);
+                    corregidos++;
+                }
             }
             else
             {
@@ -88,6 +105,13 @@ public class SyncActividadesCommandHandler : IRequestHandler<SyncActividadesComm
                     deleted.DeletedAt = null;
                     existingByCodigo[ext.Comision] = deleted;
                     actividad = deleted;
+
+                    var correctCarrera = ResolveCarrera(ext);
+                    if (correctCarrera is not null && actividad.CarreraId != correctCarrera.Id)
+                    {
+                        actividad.SetCarrera(correctCarrera.Id);
+                        corregidos++;
+                    }
                     existed++;
                 }
                 else
@@ -98,11 +122,7 @@ public class SyncActividadesCommandHandler : IRequestHandler<SyncActividadesComm
                         continue;
                     }
 
-                    var carrera = ext.PropuestaId.HasValue && carrerasByCodigoExt.TryGetValue(ext.PropuestaId.Value, out var matchByExt)
-                        ? matchByExt
-                        : ext.PropuestaCodigo is not null && carrerasByCodigoStr.TryGetValue(ext.PropuestaCodigo, out var matchByStr)
-                            ? matchByStr
-                            : carreras.FirstOrDefault();
+                    var carrera = ResolveCarrera(ext);
                     actividad = new Actividad(
                         ext.ElementoNombre,
                         ext.ElementoCodigo,
@@ -138,6 +158,6 @@ public class SyncActividadesCommandHandler : IRequestHandler<SyncActividadesComm
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return Result<SyncActividadesResult>.Success(new SyncActividadesResult(created, existed, noPeriodo, noCarrera, external.Count, docentesAsignados));
+        return Result<SyncActividadesResult>.Success(new SyncActividadesResult(created, existed, noPeriodo, noCarrera, external.Count, docentesAsignados, corregidos));
     }
 }

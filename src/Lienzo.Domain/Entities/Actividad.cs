@@ -57,6 +57,12 @@ public class Actividad : BaseEntity
         UpdatedAt = DateTime.UtcNow;
     }
 
+    public void SetCarrera(Guid carreraId)
+    {
+        CarreraId = carreraId;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     public void UpdateInfo(string nombre, string codigoMateria, Guid periodoId, Guid carreraId)
     {
         Nombre = nombre;
