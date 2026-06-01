@@ -51,7 +51,7 @@ export interface Building {
 export interface Classroom {
   id: string;
   name: string;
-  code: string;
+  code?: string;
   buildingId: string;
   buildingName?: string;
   floor: number;

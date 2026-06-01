@@ -1,6 +1,7 @@
 using Lienzo.Application.Common.Models;
 using Lienzo.Application.DTOs;
 using Lienzo.Application.Interfaces;
+using Lienzo.Domain.Enums;
 using Lienzo.Domain.Interfaces;
 using MediatR;
 
@@ -12,11 +13,13 @@ public class GetAllActividadesQueryHandler : IRequestHandler<GetAllActividadesQu
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IAuthService _authService;
+    private readonly ICurrentUserService _currentUser;
 
-    public GetAllActividadesQueryHandler(IUnitOfWork unitOfWork, IAuthService authService)
+    public GetAllActividadesQueryHandler(IUnitOfWork unitOfWork, IAuthService authService, ICurrentUserService currentUser)
     {
         _unitOfWork = unitOfWork;
         _authService = authService;
+        _currentUser = currentUser;
     }
 
     public async Task<Result<List<ActividadDto>>> Handle(GetAllActividadesQuery query, CancellationToken ct)
@@ -47,6 +50,13 @@ public class GetAllActividadesQueryHandler : IRequestHandler<GetAllActividadesQu
                 docNames
             );
         }).ToList();
+
+        if (_currentUser.Role == UserRole.Teacher.ToString())
+        {
+            var userIdStr = _currentUser.UserId.ToString();
+            dtos = dtos.Where(a => a.DocenteIds.Contains(userIdStr)).ToList();
+        }
+
         return Result<List<ActividadDto>>.Success(dtos);
     }
 }

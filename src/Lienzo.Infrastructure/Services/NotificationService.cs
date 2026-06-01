@@ -11,11 +11,13 @@ public class NotificationService : INotificationService
 {
     private readonly LienzoDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IRealTimeNotifier _realTimeNotifier;
 
-    public NotificationService(LienzoDbContext context, UserManager<ApplicationUser> userManager)
+    public NotificationService(LienzoDbContext context, UserManager<ApplicationUser> userManager, IRealTimeNotifier realTimeNotifier)
     {
         _context = context;
         _userManager = userManager;
+        _realTimeNotifier = realTimeNotifier;
     }
 
     public async Task<Result<bool>> SendAsync(
@@ -32,6 +34,18 @@ public class NotificationService : INotificationService
         var notification = new Notification(userId, title, body, notificationType, relatedEntityId, relatedEntityType);
         _context.Notifications.Add(notification);
         await _context.SaveChangesAsync();
+
+        await _realTimeNotifier.NotifyUserAsync(userId, new
+        {
+            id = notification.Id,
+            userId = notification.UserId,
+            title = notification.Title,
+            message = notification.Body,
+            type = notification.Type.ToString(),
+            isRead = notification.IsRead,
+            referenceId = notification.RelatedEntityId,
+            createdAt = notification.CreatedAt.ToString("o")
+        });
 
         return Result<bool>.Success(true);
     }
@@ -56,6 +70,27 @@ public class NotificationService : INotificationService
         }
 
         await _context.SaveChangesAsync();
+
+        foreach (var user in users)
+        {
+            var lastNotification = _context.Notifications
+                .Where(n => n.UserId == user.Id)
+                .OrderByDescending(n => n.CreatedAt)
+                .First();
+
+            await _realTimeNotifier.NotifyUserAsync(user.Id, new
+            {
+                id = lastNotification.Id,
+                userId = lastNotification.UserId,
+                title = lastNotification.Title,
+                message = lastNotification.Body,
+                type = lastNotification.Type.ToString(),
+                isRead = lastNotification.IsRead,
+                referenceId = lastNotification.RelatedEntityId,
+                createdAt = lastNotification.CreatedAt.ToString("o")
+            });
+        }
+
         return Result<bool>.Success(true);
     }
 }

@@ -21,7 +21,11 @@ import AdminHolidays from '@/pages/AdminHolidays';
 import AdminPeriodos from '@/pages/AdminPeriodos';
 import AdminCarreras from '@/pages/AdminCarreras';
 import AdminActividades from '@/pages/AdminActividades';
+import AdminReports from '@/pages/AdminReports';
+import AdminMaintenance from '@/pages/AdminMaintenance';
+import AdminSurveys from '@/pages/AdminSurveys';
 import AnnouncementsPage from '@/pages/AnnouncementsPage';
+import MySurveys from '@/pages/MySurveys';
 import ProfilePage from '@/pages/ProfilePage';
 
 export default function App() {
@@ -99,6 +103,14 @@ export default function App() {
             </AppShell>
           }
         />
+        <Route
+          path="/surveys"
+          element={
+            <AppShell>
+              <MySurveys />
+            </AppShell>
+          }
+        />
       </Route>
 
       <Route element={<AdminRoute />}>
@@ -163,6 +175,30 @@ export default function App() {
           element={
             <AppShell>
               <AdminActividades />
+            </AppShell>
+          }
+        />
+        <Route
+          path="/admin/reports"
+          element={
+            <AppShell>
+              <AdminReports />
+            </AppShell>
+          }
+        />
+        <Route
+          path="/admin/maintenance"
+          element={
+            <AppShell>
+              <AdminMaintenance />
+            </AppShell>
+          }
+        />
+        <Route
+          path="/admin/surveys"
+          element={
+            <AppShell>
+              <AdminSurveys />
             </AppShell>
           }
         />

@@ -22,6 +22,9 @@ public class UnitOfWork : IUnitOfWork
     public IActividadRepository Actividades { get; }
     public ITipoPeriodoRepository TiposPeriodo { get; }
     public IRepository<ActividadDocente> ActividadDocentes { get; }
+    public IRepository<ReservationReminder> ReservationReminders { get; }
+    public IRepository<MaintenanceBlock> MaintenanceBlocks { get; }
+    public IRepository<ClassroomSurvey> ClassroomSurveys { get; }
 
     public UnitOfWork(
         LienzoDbContext context,
@@ -50,6 +53,9 @@ public class UnitOfWork : IUnitOfWork
         Actividades = actividades;
         TiposPeriodo = tiposPeriodo;
         ActividadDocentes = new GenericRepository<ActividadDocente>(context);
+        ReservationReminders = new GenericRepository<ReservationReminder>(context);
+        MaintenanceBlocks = new GenericRepository<MaintenanceBlock>(context);
+        ClassroomSurveys = new GenericRepository<ClassroomSurvey>(context);
     }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

@@ -23,6 +23,9 @@ import {
   ChevronRight,
   PanelLeftClose,
   PanelLeft,
+  BarChart3,
+  Wrench,
+  Star,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
@@ -39,12 +42,16 @@ const navItems = [
   { path: '/reservations', label: 'Reservaciones', icon: CalendarCheck },
   { path: '/schedule', label: 'Horario', icon: CalendarDays },
   { path: '/announcements', label: 'Anuncios', icon: Megaphone },
+  { path: '/surveys', label: 'Mis Encuestas', icon: Star },
 ];
 
 const adminNavItems = [
   { path: '/admin/reservations', label: 'Reservaciones', icon: CalendarCheck },
   { path: '/admin/classrooms', label: 'Aulas', icon: DoorOpen },
   { path: '/admin/buildings', label: 'Edificios', icon: Building2 },
+  { path: '/admin/reports', label: 'Reportes', icon: BarChart3 },
+  { path: '/admin/maintenance', label: 'Mantenimiento', icon: Wrench },
+  { path: '/admin/surveys', label: 'Encuestas', icon: Star },
   { path: '/admin/holidays', label: 'Feriados', icon: CalendarX2 },
 ];
 

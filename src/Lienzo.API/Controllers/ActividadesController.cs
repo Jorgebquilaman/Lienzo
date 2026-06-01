@@ -10,9 +10,10 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Lienzo.API.Controllers;
 
-[Authorize(Roles = "Admin")]
+[Authorize]
 public class ActividadesController : BaseApiController
 {
+    [Authorize]
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
@@ -41,6 +42,7 @@ public class ActividadesController : BaseApiController
         return HandleResult(result);
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPost("sync")]
     public async Task<IActionResult> Sync([FromQuery] short anioAcademico = 2026)
     {

@@ -34,6 +34,24 @@ public class CheckAvailabilityQueryHandler : IRequestHandler<CheckAvailabilityQu
 
         var dateOnly = DateOnly.FromDateTime(query.Date);
         var timeRange = new TimeRange(query.StartTime, query.EndTime);
+        var resStart = query.Date.Date + query.StartTime.ToTimeSpan();
+        var resEnd = query.Date.Date + query.EndTime.ToTimeSpan();
+
+        var maintenanceBlocks = await _unitOfWork.MaintenanceBlocks.GetAllAsync();
+        var inMaintenance = maintenanceBlocks
+            .Where(m => m.ClassroomId == query.ClassroomId && m.IsActive)
+            .Any(m => m.StartTime.ToLocalTime() < resEnd && m.EndTime.ToLocalTime() > resStart);
+
+        if (inMaintenance)
+        {
+            return Result<AvailabilityResponse>.Success(new AvailabilityResponse(
+                query.ClassroomId,
+                query.Date,
+                query.StartTime,
+                query.EndTime,
+                false,
+                "Classroom is under maintenance"));
+        }
 
         var conflict = classroom.Reservations
             .Where(r => r.Date == dateOnly &&

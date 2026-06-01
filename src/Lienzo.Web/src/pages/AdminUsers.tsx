@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Pencil, Shield, ShieldOff, RefreshCw } from 'lucide-react';
+import { Plus, Pencil, Shield, ShieldOff, RefreshCw, Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -45,10 +45,15 @@ const userSchema = z.object({
 
 type UserFormData = z.infer<typeof userSchema>;
 
+type SortKey = 'fullName' | 'email' | 'role' | 'createdAt' | 'isActive';
+
 export default function AdminUsers() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<AdminUser | null>(null);
   const [syncResult, setSyncResult] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [sortKey, setSortKey] = useState<SortKey>('fullName');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const queryClient = useQueryClient();
 
   const form = useForm<UserFormData>({
@@ -92,6 +97,52 @@ export default function AdminUsers() {
     },
     onError: () => setSyncResult('Error al sincronizar docentes'),
   });
+
+  const filtered = useMemo(() => {
+    if (!data) return [];
+    const q = search.toLowerCase();
+    let result = data.filter((u) =>
+      `${u.firstName} ${u.lastName} ${u.email}`.toLowerCase().includes(q)
+    );
+    result.sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case 'fullName':
+          cmp = `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
+          break;
+        case 'email':
+          cmp = a.email.localeCompare(b.email);
+          break;
+        case 'role':
+          cmp = a.role.localeCompare(b.role);
+          break;
+        case 'createdAt':
+          cmp = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          break;
+        case 'isActive':
+          cmp = Number(a.isActive) - Number(b.isActive);
+          break;
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+    return result;
+  }, [data, search, sortKey, sortDir]);
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  };
+
+  const SortIcon = ({ column }: { column: SortKey }) => {
+    if (sortKey !== column) return <ArrowUpDown className="h-3.5 w-3.5 ml-1 inline opacity-40" />;
+    return sortDir === 'asc'
+      ? <ArrowUp className="h-3.5 w-3.5 ml-1 inline" />
+      : <ArrowDown className="h-3.5 w-3.5 ml-1 inline" />;
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -139,20 +190,41 @@ export default function AdminUsers() {
           <p className="font-medium">No hay usuarios registrados</p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="space-y-4">
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary-400" />
+            <input
+              type="text"
+              placeholder="Buscar por nombre o correo..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full h-10 pl-9 pr-3 rounded-lg border border-primary-200 bg-white text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+            />
+          </div>
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Correo</TableHead>
-                <TableHead>Rol</TableHead>
-                <TableHead className="hidden sm:table-cell">Registro</TableHead>
-                <TableHead>Estado</TableHead>
+                <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('fullName')}>
+                  Nombre <SortIcon column="fullName" />
+                </TableHead>
+                <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('email')}>
+                  Correo <SortIcon column="email" />
+                </TableHead>
+                <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('role')}>
+                  Rol <SortIcon column="role" />
+                </TableHead>
+                <TableHead className="hidden sm:table-cell cursor-pointer select-none" onClick={() => toggleSort('createdAt')}>
+                  Registro <SortIcon column="createdAt" />
+                </TableHead>
+                <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('isActive')}>
+                  Estado <SortIcon column="isActive" />
+                </TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.map((u) => (
+              {filtered.map((u) => (
                 <TableRow key={u.id}>
                   <TableCell className="font-medium">{u.firstName} {u.lastName}</TableCell>
                   <TableCell className="text-primary-500 text-sm">{u.email}</TableCell>
@@ -193,6 +265,7 @@ export default function AdminUsers() {
               ))}
             </TableBody>
           </Table>
+        </div>
         </div>
       )}
 

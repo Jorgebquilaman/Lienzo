@@ -1,6 +1,8 @@
 using System.Text;
 using Lienzo.Application.Interfaces;
+using Lienzo.Domain.Entities;
 using Lienzo.Domain.Interfaces;
+
 using Lienzo.Infrastructure.Data;
 using Lienzo.Infrastructure.Identity;
 using Lienzo.Infrastructure.Repositories;
@@ -11,6 +13,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.IdentityModel.Tokens;
 using Npgsql;
 
@@ -104,6 +107,7 @@ public static class DependencyInjection
         services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<IReportService, ReportService>();
         services.AddScoped<ISyncBuildingService, SyncBuildingService>();
         services.AddScoped<ISyncClassroomService, SyncClassroomService>();
         services.AddScoped<ISyncTipoPeriodoService, SyncTipoPeriodoService>();
@@ -111,6 +115,10 @@ public static class DependencyInjection
         services.AddScoped<ISyncActividadService, SyncActividadService>();
         services.AddScoped<ISyncDocenteService, SyncDocenteService>();
         services.AddScoped<ISyncCarreraService, SyncCarreraService>();
+
+        services.AddScoped<IRepository<ReservationReminder>, GenericRepository<ReservationReminder>>();
+
+        services.AddSingleton<IHostedService, ReservationReminderService>();
 
         services.AddHttpContextAccessor();
 

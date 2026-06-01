@@ -1,7 +1,9 @@
 using Lienzo.API.Extensions;
 using Lienzo.API.Hubs;
 using Lienzo.API.Middleware;
+using Lienzo.API.Services;
 using Lienzo.Application;
+using Lienzo.Application.Interfaces;
 using Lienzo.Infrastructure;
 using Lienzo.Infrastructure.Data;
 using Serilog;
@@ -31,6 +33,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddSignalR();
 builder.Services.AddSwaggerWithAuth();
 builder.Services.AddHealthChecks();
+builder.Services.AddScoped<IRealTimeNotifier, RealTimeNotifier>();
 
 var app = builder.Build();
 

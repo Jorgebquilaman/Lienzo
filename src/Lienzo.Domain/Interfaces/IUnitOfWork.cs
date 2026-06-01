@@ -15,5 +15,8 @@ public interface IUnitOfWork : IDisposable
     IActividadRepository Actividades { get; }
     ITipoPeriodoRepository TiposPeriodo { get; }
     IRepository<ActividadDocente> ActividadDocentes { get; }
+    IRepository<ReservationReminder> ReservationReminders { get; }
+    IRepository<MaintenanceBlock> MaintenanceBlocks { get; }
+    IRepository<ClassroomSurvey> ClassroomSurveys { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

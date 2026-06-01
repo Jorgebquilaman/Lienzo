@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { CalendarCheck, XCircle, CheckCircle, Pencil, Repeat } from 'lucide-react';
+import { CalendarCheck, XCircle, CheckCircle, Pencil, Repeat, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { ReservationModal } from '@/components/classrooms/ReservationModal';
+import { SurveyModal } from '@/components/surveys/SurveyModal';
 import { getStatusLabel, formatDateTime } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
 import type { Reservation, PaginatedResponse, UserRole } from '@/types';
@@ -22,9 +23,13 @@ const tabs = [
 export default function MyReservations() {
   const [activeTab, setActiveTab] = useState('upcoming');
   const [editingReservation, setEditingReservation] = useState<Reservation | null>(null);
+  const [surveyReservation, setSurveyReservation] = useState<Reservation | null>(null);
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const isAdmin = user?.role === 'Admin';
+
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   const statusMap: Record<string, string> = {
     pending: 'Pending',
@@ -32,14 +37,23 @@ export default function MyReservations() {
   };
 
   const { data: response, isLoading } = useQuery({
-    queryKey: ['myReservations', activeTab],
+    queryKey: ['myReservations', activeTab, page],
     queryFn: () => {
+      const params = `page=${page}&pageSize=${pageSize}`;
       if (activeTab === 'upcoming' || activeTab === 'past')
-        return api.get<PaginatedResponse<Reservation>>(`/reservations?filter=${activeTab}`);
-      return api.get<PaginatedResponse<Reservation>>(`/reservations?status=${statusMap[activeTab] || ''}`);
+        return api.get<PaginatedResponse<Reservation>>(`/reservations?filter=${activeTab}&${params}`);
+      return api.get<PaginatedResponse<Reservation>>(`/reservations?status=${statusMap[activeTab] || ''}&${params}`);
     },
   });
   const data = response?.value;
+  const totalPages = response?.totalPages ?? 1;
+
+  const { data: mySurveys } = useQuery({
+    queryKey: ['mySurveys'],
+    queryFn: () => api.get<{ items: { reservationId: string }[] }>('/surveys/my'),
+    enabled: activeTab === 'past',
+  });
+  const ratedReservations = new Set(mySurveys?.items?.map((s) => s.reservationId) ?? []);
 
   const cancelMutation = useMutation({
     mutationFn: (id: string) => api.patch(`/reservations/${id}/cancel`),
@@ -55,6 +69,11 @@ export default function MyReservations() {
     },
   });
 
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setPage(1);
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -62,7 +81,7 @@ export default function MyReservations() {
         <p className="text-primary-500 mt-1">Gestiona tus reservaciones de aulas</p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList className="w-full sm:w-auto overflow-x-auto">
           {tabs.map((tab) => (
             <TabsTrigger key={tab.value} value={tab.value}>
@@ -146,6 +165,15 @@ export default function MyReservations() {
                               <CheckCircle className="h-4 w-4" />
                             </button>
                           )}
+                          {activeTab === 'past' && reservation.status === 'Approved' && !ratedReservations.has(reservation.id) && (
+                            <button
+                              className="p-1.5 rounded-md text-yellow-600 hover:bg-yellow-50"
+                              onClick={() => setSurveyReservation(reservation)}
+                              title="Calificar aula"
+                            >
+                              <Star className="h-4 w-4" />
+                            </button>
+                          )}
                           {(reservation.status === 'Pending' || reservation.status === 'Approved') && (
                             <>
                               <button
@@ -171,6 +199,37 @@ export default function MyReservations() {
                     </CardContent>
                   </Card>
                 ))}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-2 pt-4">
+                    <button
+                      className="p-2 rounded-lg text-primary-500 hover:bg-primary-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                      disabled={page <= 1}
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                      <button
+                        key={p}
+                        className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
+                          p === page
+                            ? 'bg-primary-600 text-white'
+                            : 'text-primary-600 hover:bg-primary-50'
+                        }`}
+                        onClick={() => setPage(p)}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                    <button
+                      className="p-2 rounded-lg text-primary-500 hover:bg-primary-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                      disabled={page >= totalPages}
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </TabsContent>
@@ -185,6 +244,13 @@ export default function MyReservations() {
           setEditingReservation(null);
           queryClient.invalidateQueries({ queryKey: ['myReservations'] });
         }}
+      />
+
+      <SurveyModal
+        open={!!surveyReservation}
+        onOpenChange={(open) => { if (!open) setSurveyReservation(null); }}
+        reservationId={surveyReservation?.id || ''}
+        classroomName={surveyReservation?.classroomName || ''}
       />
     </div>
   );

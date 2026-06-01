@@ -73,10 +73,10 @@ function AdminDashboard({
   const navigate = useNavigate();
 
   const statCards = [
-    { label: 'Total Aulas', value: stats?.totalClassrooms, icon: DoorOpen, color: 'text-blue-600 bg-blue-50' },
-    { label: 'Reservaciones Hoy', value: stats?.reservationsToday, icon: CalendarCheck, color: 'text-green-600 bg-green-50' },
-    { label: 'Pendientes de Aprobación', value: stats?.pendingApprovals, icon: Clock, color: 'text-yellow-600 bg-yellow-50' },
-    { label: 'Ocupación', value: stats ? `${Math.round(stats.occupancyRate)}%` : '--', icon: Percent, color: 'text-accent-600 bg-accent-50' },
+    { label: 'Total Aulas', value: stats?.totalClassrooms, icon: DoorOpen, color: 'text-blue-600 bg-blue-50', border: 'border-blue-500' },
+    { label: 'Reservaciones Hoy', value: stats?.reservationsToday, icon: CalendarCheck, color: 'text-green-600 bg-green-50', border: 'border-green-500' },
+    { label: 'Pendientes de Aprobación', value: stats?.pendingApprovals, icon: Clock, color: 'text-yellow-600 bg-yellow-50', border: 'border-yellow-500' },
+    { label: 'Ocupación', value: stats ? `${Math.round(stats.occupancyRate)}%` : '--', icon: Percent, color: 'text-accent-600 bg-accent-50', border: 'border-accent-500' },
   ];
 
   return (
@@ -88,7 +88,7 @@ function AdminDashboard({
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((stat) => (
-          <Card key={stat.label}>
+          <Card key={stat.label} className={`border-t-4 ${stat.border}`}>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className={`p-2 rounded-lg ${stat.color}`}>

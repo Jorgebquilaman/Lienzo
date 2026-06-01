@@ -35,6 +35,9 @@ public class LienzoDbContext : IdentityDbContext<ApplicationUser, IdentityRole<G
     public DbSet<Actividad> Actividades => Set<Actividad>();
     public DbSet<ActividadDocente> ActividadDocentes => Set<ActividadDocente>();
     public DbSet<TipoPeriodo> TiposPeriodo => Set<TipoPeriodo>();
+    public DbSet<ReservationReminder> ReservationReminders => Set<ReservationReminder>();
+    public DbSet<MaintenanceBlock> MaintenanceBlocks => Set<MaintenanceBlock>();
+    public DbSet<ClassroomSurvey> ClassroomSurveys => Set<ClassroomSurvey>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -55,6 +58,9 @@ public class LienzoDbContext : IdentityDbContext<ApplicationUser, IdentityRole<G
         builder.Entity<Announcement>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<Notification>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<ActividadDocente>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<ReservationReminder>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<MaintenanceBlock>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<ClassroomSurvey>().HasQueryFilter(e => !e.IsDeleted);
     }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

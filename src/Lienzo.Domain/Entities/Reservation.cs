@@ -135,9 +135,19 @@ public class Reservation : BaseEntity
         if (Status != ReservationStatus.Pending)
             throw new InvalidOperationException("Only pending reservations can be updated.");
 
+        var previousTitle = Title;
+        var previousDescription = Description;
+
         SetTitle(title);
         Description = description;
         UpdatedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new ReservationUpdatedEvent(
+            Id,
+            UserId,
+            previousTitle,
+            previousDescription,
+            DateTime.UtcNow));
     }
 
     private void SetTitle(string title)

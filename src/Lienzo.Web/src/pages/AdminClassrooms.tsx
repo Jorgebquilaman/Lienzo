@@ -54,7 +54,7 @@ export default function AdminClassrooms() {
     const list = classrooms || [];
     const filtered = list.filter(c => {
       if (search && !c.name.toLowerCase().includes(search.toLowerCase()) &&
-          !c.code.toLowerCase().includes(search.toLowerCase()) &&
+          !(c.code || '').toLowerCase().includes(search.toLowerCase()) &&
           !(c.buildingName || '').toLowerCase().includes(search.toLowerCase()) &&
           !(c.type || '').toLowerCase().includes(search.toLowerCase()))
         return false;
@@ -150,7 +150,7 @@ export default function AdminClassrooms() {
     setPreviewUrl(classroom.imageUrl || '');
     form.reset({
       name: classroom.name,
-      code: classroom.code,
+      code: classroom.code || '',
       buildingId: classroom.buildingId,
       floor: classroom.floor,
       capacity: classroom.capacity,

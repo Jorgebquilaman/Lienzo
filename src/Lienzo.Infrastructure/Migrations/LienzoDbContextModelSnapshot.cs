@@ -382,6 +382,73 @@ namespace Lienzo.Infrastructure.Migrations
                     b.ToTable("aulas", (string)null);
                 });
 
+            modelBuilder.Entity("Lienzo.Domain.Entities.ClassroomSurvey", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("CleanlinessRating")
+                        .HasPrecision(2, 1)
+                        .HasColumnType("numeric(2,1)")
+                        .HasColumnName("calificacion_limpieza");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("comentario");
+
+                    b.Property<decimal>("ConditionRating")
+                        .HasPrecision(2, 1)
+                        .HasColumnType("numeric(2,1)")
+                        .HasColumnName("calificacion_condicion");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("eliminado_en");
+
+                    b.Property<decimal>("EquipmentRating")
+                        .HasPrecision(2, 1)
+                        .HasColumnType("numeric(2,1)")
+                        .HasColumnName("calificacion_equipamiento");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("eliminado");
+
+                    b.Property<decimal>("OverallRating")
+                        .HasPrecision(2, 1)
+                        .HasColumnType("numeric(2,1)")
+                        .HasColumnName("calificacion_general");
+
+                    b.Property<Guid>("ReservationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reserva_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("actualizado_en");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReservationId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_encuestas_aula_reserva");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_encuestas_aula_usuario");
+
+                    b.ToTable("encuestas_aula", (string)null);
+                });
+
             modelBuilder.Entity("Lienzo.Domain.Entities.Holiday", b =>
                 {
                     b.Property<Guid>("Id")
@@ -410,6 +477,65 @@ namespace Lienzo.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Holidays");
+                });
+
+            modelBuilder.Entity("Lienzo.Domain.Entities.MaintenanceBlock", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ClassroomId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("aula_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("creado_por");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("eliminado_en");
+
+                    b.Property<DateTime>("EndTime")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fin");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("activo");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("eliminado");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("motivo");
+
+                    b.Property<DateTime>("StartTime")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("inicio");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("actualizado_en");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClassroomId")
+                        .HasDatabaseName("ix_bloques_mantenimiento_aula");
+
+                    b.HasIndex("IsActive")
+                        .HasDatabaseName("ix_bloques_mantenimiento_activo");
+
+                    b.ToTable("bloques_mantenimiento", (string)null);
                 });
 
             modelBuilder.Entity("Lienzo.Domain.Entities.Notification", b =>
@@ -626,6 +752,57 @@ namespace Lienzo.Infrastructure.Migrations
                         .HasDatabaseName("ix_reservas_usuario_id");
 
                     b.ToTable("reservas", (string)null);
+                });
+
+            modelBuilder.Entity("Lienzo.Domain.Entities.ReservationReminder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("eliminado_en");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("eliminado");
+
+                    b.Property<string>("ReminderType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("tipo_recordatorio");
+
+                    b.Property<Guid>("ReservationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reserva_id");
+
+                    b.Property<DateTime>("SentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("enviado_en");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("actualizado_en");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("usuario_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SentAt")
+                        .HasDatabaseName("ix_recordatorios_reserva_enviado_en");
+
+                    b.HasIndex("ReservationId", "ReminderType")
+                        .HasDatabaseName("ix_recordatorios_reserva_tipo");
+
+                    b.ToTable("recordatorios_reserva", (string)null);
                 });
 
             modelBuilder.Entity("Lienzo.Domain.Entities.TipoPeriodo", b =>
@@ -953,6 +1130,28 @@ namespace Lienzo.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Building");
+                });
+
+            modelBuilder.Entity("Lienzo.Domain.Entities.ClassroomSurvey", b =>
+                {
+                    b.HasOne("Lienzo.Domain.Entities.Reservation", "Reservation")
+                        .WithMany()
+                        .HasForeignKey("ReservationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Reservation");
+                });
+
+            modelBuilder.Entity("Lienzo.Domain.Entities.MaintenanceBlock", b =>
+                {
+                    b.HasOne("Lienzo.Domain.Entities.Classroom", "Classroom")
+                        .WithMany()
+                        .HasForeignKey("ClassroomId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Classroom");
                 });
 
             modelBuilder.Entity("Lienzo.Domain.Entities.Periodo", b =>

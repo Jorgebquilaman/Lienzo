@@ -1,0 +1,33 @@
+using Lienzo.Application.DTOs;
+using Lienzo.Application.Queries.GetDemandMetrics;
+using Lienzo.Application.Queries.GetUsageByProposal;
+using Lienzo.Application.Queries.GetUsageReport;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace Lienzo.API.Controllers;
+
+[Authorize(Roles = "Admin")]
+public class ReportsController : BaseApiController
+{
+    [HttpPost("usage")]
+    public async Task<IActionResult> GetUsageReport([FromBody] UsageReportFilter filter)
+    {
+        var result = await Mediator.Send(new GetUsageReportQuery(filter));
+        return HandleResult(result);
+    }
+
+    [HttpGet("demand-metrics")]
+    public async Task<IActionResult> GetDemandMetrics([FromQuery] DateOnly? fromDate, [FromQuery] DateOnly? toDate)
+    {
+        var result = await Mediator.Send(new GetDemandMetricsQuery(fromDate, toDate));
+        return HandleResult(result);
+    }
+
+    [HttpPost("usage-by-proposal")]
+    public async Task<IActionResult> GetUsageByProposal([FromBody] UsageByProposalFilter filter)
+    {
+        var result = await Mediator.Send(new GetUsageByProposalQuery(filter));
+        return HandleResult(result);
+    }
+}

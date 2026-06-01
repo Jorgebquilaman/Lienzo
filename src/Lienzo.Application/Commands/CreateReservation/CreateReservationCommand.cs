@@ -59,6 +59,22 @@ public class CreateReservationCommandHandler : IRequestHandler<CreateReservation
                 return Result<ReservationDto>.Failure("No se permiten reservas en días feriados", "HOLIDAY");
         }
 
+        var maintenanceBlocks = await _unitOfWork.MaintenanceBlocks.GetAllAsync();
+        var activeBlocks = maintenanceBlocks
+            .Where(m => m.ClassroomId == command.Request.ClassroomId && m.IsActive)
+            .ToList();
+
+        foreach (var date in dates)
+        {
+            var resStart = date.ToDateTime(command.Request.StartTime);
+            var resEnd = date.ToDateTime(command.Request.EndTime);
+            if (activeBlocks.Any(m =>
+                m.StartTime.ToLocalTime() < resEnd &&
+                m.EndTime.ToLocalTime() > resStart))
+                return Result<ReservationDto>.Failure(
+                    "El aula está en mantenimiento en el horario solicitado", "MAINTENANCE");
+        }
+
         var hasConflict = await _unitOfWork.Reservations.HasConflictForDatesAsync(
             command.Request.ClassroomId,
             dates,
@@ -119,7 +135,7 @@ public class CreateReservationCommandHandler : IRequestHandler<CreateReservation
                 var userMap = usersResult.IsSuccess
                     ? usersResult.Value.ToDictionary(u => u.Id.ToString(), u => $"{u.FirstName} {u.LastName}")
                     : new Dictionary<string, string>();
-                dto.ActividadDocentes = string.Join(", ", actividad.Docentes.Select(d => userMap.GetValueOrDefault(d.DocenteId, d.DocenteId)));
+                dto.ActividadDocentes = string.Join(", ", actividad.Docentes.Select(d => userMap.GetValueOrDefault(d.DocenteId, d.DocenteId)).Distinct());
             }
         }
 

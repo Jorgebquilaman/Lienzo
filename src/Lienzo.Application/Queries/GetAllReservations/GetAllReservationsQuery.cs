@@ -2,6 +2,7 @@ using AutoMapper;
 using Lienzo.Application.Common.Models;
 using Lienzo.Application.DTOs;
 using Lienzo.Application.Interfaces;
+using Lienzo.Domain.Entities;
 using Lienzo.Domain.Enums;
 using Lienzo.Domain.Interfaces;
 using MediatR;
@@ -33,6 +34,19 @@ public class GetAllReservationsQueryHandler : IRequestHandler<GetAllReservations
         {
             reservations = await _unitOfWork.Reservations.GetAllWithDetailsAsync();
         }
+        else if (_currentUser.Role == UserRole.Teacher.ToString())
+        {
+            var myReservations = await _unitOfWork.Reservations.GetUserReservationsAsync(_currentUser.UserId);
+            var allRes = await _unitOfWork.Reservations.GetAllWithDetailsAsync();
+            var actividades = await _unitOfWork.Actividades.GetAllWithDetailsAsync();
+            var userIdStr = _currentUser.UserId.ToString();
+            var actividadIds = actividades
+                .Where(a => a.Docentes.Any(d => d.DocenteId == userIdStr))
+                .Select(a => a.Id)
+                .ToHashSet();
+            var docenteReservations = allRes.Where(r => r.ActividadId.HasValue && actividadIds.Contains(r.ActividadId.Value));
+            reservations = myReservations.Concat(docenteReservations).DistinctBy(r => r.Id);
+        }
         else
         {
             reservations = await _unitOfWork.Reservations.GetUserReservationsAsync(_currentUser.UserId);
@@ -44,10 +58,11 @@ public class GetAllReservationsQueryHandler : IRequestHandler<GetAllReservations
             filtered = filtered.Where(r => r.Status == statusFilter);
 
         var today = DateOnly.FromDateTime(DateTime.Now);
+        var nowTime = TimeOnly.FromDateTime(DateTime.Now);
         if (string.Equals(query.Filter, "upcoming", StringComparison.OrdinalIgnoreCase))
-            filtered = filtered.Where(r => r.Date >= today);
+            filtered = filtered.Where(r => r.Date > today || (r.Date == today && r.EndTime >= nowTime));
         else if (string.Equals(query.Filter, "past", StringComparison.OrdinalIgnoreCase))
-            filtered = filtered.Where(r => r.Date < today);
+            filtered = filtered.Where(r => r.Date < today || (r.Date == today && r.EndTime < nowTime));
 
         var filteredList = filtered.ToList();
         var totalCount = filteredList.Count;
@@ -60,7 +75,7 @@ public class GetAllReservationsQueryHandler : IRequestHandler<GetAllReservations
         var dtos = _mapper.Map<List<ReservationDto>>(paged);
 
         // Populate user names
-        if (_currentUser.Role == UserRole.Admin.ToString())
+        if (_currentUser.Role == UserRole.Admin.ToString() || _currentUser.Role == UserRole.Teacher.ToString())
         {
             var usersResult = await _authService.GetAllUsersAsync();
             if (usersResult.IsSuccess)
@@ -100,7 +115,7 @@ public class GetAllReservationsQueryHandler : IRequestHandler<GetAllReservations
             dto.ActividadNombre = act.Nombre;
             dto.ActividadPeriodo = act.Periodo?.Nombre;
             dto.ActividadCarrera = act.Carrera?.Nombre;
-            dto.ActividadDocentes = string.Join(", ", act.Docentes.Select(d => userMap.GetValueOrDefault(d.DocenteId, d.DocenteId)));
+            dto.ActividadDocentes = string.Join(", ", act.Docentes.Select(d => userMap.GetValueOrDefault(d.DocenteId, d.DocenteId)).Distinct());
         }
     }
 }

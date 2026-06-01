@@ -15,6 +15,7 @@ import {
   Clock,
   CalendarDays,
   Repeat,
+  AlertTriangle,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
@@ -26,6 +27,18 @@ import { ReservationModal } from '@/components/classrooms/ReservationModal';
 import { getClassroomTypeLabel, formatDate } from '@/lib/utils';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import type { Classroom, Reservation } from '@/types';
+
+interface MaintenanceBlockDto {
+  id: string;
+  classroomId: string;
+  classroomName: string;
+  buildingName?: string;
+  startTime: string;
+  endTime: string;
+  reason: string;
+  createdBy: string;
+  createdAt: string;
+}
 
 const featureIcons: Record<string, React.ReactNode> = {
   projector: <Projector className="h-4 w-4" />,
@@ -63,6 +76,15 @@ export default function ClassroomDetail() {
     enabled: !!id,
     retry: false,
   });
+
+  const { data: activeMaintenance } = useQuery({
+    queryKey: ['classroomMaintenance', id],
+    queryFn: () => api.get<{ items: MaintenanceBlockDto[]; totalCount: number }>(`/maintenance?classroomId=${id}&activeOnly=true`),
+    enabled: !!id,
+    retry: false,
+  });
+
+  const isInMaintenance = (activeMaintenance?.items?.length ?? 0) > 0;
 
   const scheduleData = weeklySchedule?.reduce<Record<string, number>>((acc, r) => {
     const day = formatDate(r.date).split(',')[0];
@@ -133,6 +155,12 @@ export default function ClassroomDetail() {
               {classroom.name}
             </h1>
             <Badge>{getClassroomTypeLabel(classroom.type)}</Badge>
+            {isInMaintenance && (
+              <Badge variant="pending" className="flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                En mantenimiento
+              </Badge>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-3 text-sm text-primary-500 mt-2">
             <span className="flex items-center gap-1">
@@ -149,13 +177,19 @@ export default function ClassroomDetail() {
             </span>
           </div>
         </div>
-        {user?.role !== 'Student' && (
+        {user?.role !== 'Student' && !isInMaintenance && (
           <Button
             variant="accent"
             size="lg"
             onClick={() => setShowReservationModal(true)}
           >
             Reservar ahora
+          </Button>
+        )}
+        {isInMaintenance && (
+          <Button variant="outline" size="lg" disabled className="opacity-60 cursor-not-allowed">
+            <AlertTriangle className="h-4 w-4 mr-2" />
+            En mantenimiento
           </Button>
         )}
       </div>
