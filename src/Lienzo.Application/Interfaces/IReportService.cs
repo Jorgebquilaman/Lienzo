@@ -8,4 +8,5 @@ public interface IReportService
     Task<Result<UsageReportResponse>> GetUsageReportAsync(UsageReportFilter filter);
     Task<Result<DemandMetricsResponse>> GetDemandMetricsAsync(DateOnly? fromDate, DateOnly? toDate);
     Task<Result<UsageByProposalResponse>> GetUsageByProposalAsync(UsageByProposalFilter filter);
+    Task<Result<DocenteCargaHorariaResponse>> GetDocenteCargaHorariaAsync(DocenteCargaHorariaFilter filter);
 }

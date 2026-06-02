@@ -1,5 +1,6 @@
 using Lienzo.Application.DTOs;
 using Lienzo.Application.Queries.GetDemandMetrics;
+using Lienzo.Application.Queries.GetDocenteCargaHoraria;
 using Lienzo.Application.Queries.GetUsageByProposal;
 using Lienzo.Application.Queries.GetUsageReport;
 using Microsoft.AspNetCore.Authorization;
@@ -28,6 +29,13 @@ public class ReportsController : BaseApiController
     public async Task<IActionResult> GetUsageByProposal([FromBody] UsageByProposalFilter filter)
     {
         var result = await Mediator.Send(new GetUsageByProposalQuery(filter));
+        return HandleResult(result);
+    }
+
+    [HttpPost("docente-carga-horaria")]
+    public async Task<IActionResult> GetDocenteCargaHoraria([FromBody] DocenteCargaHorariaFilter filter)
+    {
+        var result = await Mediator.Send(new GetDocenteCargaHorariaQuery(filter));
         return HandleResult(result);
     }
 }

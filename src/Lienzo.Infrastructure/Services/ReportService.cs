@@ -211,4 +211,96 @@ public class ReportService : IReportService
 
         return Result<UsageByProposalResponse>.Success(new(items, grandTotal, Math.Round(grandHours, 2), overallCancellation));
     }
+
+    public async Task<Result<DocenteCargaHorariaResponse>> GetDocenteCargaHorariaAsync(DocenteCargaHorariaFilter filter)
+    {
+        var reservationsQuery = _context.Reservations
+            .Where(r => !r.IsDeleted && r.Status == ReservationStatus.Approved);
+
+        if (filter.FromDate.HasValue)
+            reservationsQuery = reservationsQuery.Where(r => r.Date >= filter.FromDate.Value);
+        if (filter.ToDate.HasValue)
+            reservationsQuery = reservationsQuery.Where(r => r.Date <= filter.ToDate.Value);
+
+        var reservations = await reservationsQuery.ToListAsync();
+
+        var actividadIds = reservations.Where(r => r.ActividadId.HasValue)
+            .Select(r => r.ActividadId!.Value).Distinct().ToList();
+
+        var actividadDocentes = actividadIds.Count > 0
+            ? await _context.Set<ActividadDocente>()
+                .Where(ad => actividadIds.Contains(ad.ActividadId) && !ad.IsDeleted)
+                .ToListAsync()
+            : [];
+
+        var docMap = actividadDocentes
+            .GroupBy(ad => ad.ActividadId)
+            .ToDictionary(g => g.Key, g => g.Select(ad => ad.DocenteId).Distinct().ToList());
+
+        var allDocenteIds = actividadDocentes.Select(ad => ad.DocenteId).Distinct()
+            .Concat(reservations.Where(r => r.ActividadId == null).Select(r => r.UserId.ToString()))
+            .Distinct()
+            .ToList();
+
+        var users = allDocenteIds.Count > 0
+            ? await _context.Users.Where(u => allDocenteIds.Contains(u.Id.ToString())).ToListAsync()
+            : [];
+
+        var userNameMap = users.ToDictionary(u => u.Id.ToString(), u => $"{u.FirstName} {u.LastName}");
+        var allUserIds = users.Select(u => u.Id.ToString()).ToHashSet();
+
+        var docenteReservations = new Dictionary<string, List<(string Mes, double Horas)>>();
+
+        void AddHoras(string docenteId, DateOnly date, double horas)
+        {
+            var mes = $"{date.Year}-{date.Month:D2}";
+            if (!docenteReservations.ContainsKey(docenteId))
+                docenteReservations[docenteId] = [];
+            docenteReservations[docenteId].Add((mes, horas));
+        }
+
+        foreach (var r in reservations)
+        {
+            var horas = (r.EndTime.ToTimeSpan() - r.StartTime.ToTimeSpan()).TotalHours;
+
+            if (r.ActividadId.HasValue && docMap.TryGetValue(r.ActividadId.Value, out var docIds))
+            {
+                foreach (var docId in docIds)
+                {
+                    if (allUserIds.Contains(docId))
+                        AddHoras(docId, r.Date, horas);
+                }
+            }
+            else
+            {
+                var uid = r.UserId.ToString();
+                if (allUserIds.Contains(uid))
+                    AddHoras(uid, r.Date, horas);
+            }
+        }
+
+        var items = docenteReservations
+            .Select(kv =>
+            {
+                var totalHoras = kv.Value.Sum(x => x.Horas);
+                var totalRes = kv.Value.Count;
+                var porMes = kv.Value
+                    .GroupBy(x => x.Mes)
+                    .Select(g => new MesCargaHoraria(g.Key, g.Count(), Math.Round(g.Sum(x => x.Horas), 2)))
+                    .OrderBy(m => m.Mes)
+                    .ToList();
+
+                return new DocenteCargaHorariaItem(
+                    kv.Key,
+                    userNameMap.GetValueOrDefault(kv.Key, kv.Key),
+                    totalRes,
+                    Math.Round(totalHoras, 2),
+                    porMes);
+            })
+            .OrderByDescending(i => i.TotalHoras)
+            .ToList();
+
+        return Result<DocenteCargaHorariaResponse>.Success(new(
+            items, items.Count, Math.Round(items.Sum(i => i.TotalHoras), 2)));
+    }
 }

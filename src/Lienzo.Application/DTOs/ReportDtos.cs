@@ -59,3 +59,19 @@ public record UsageByProposalResponse(
     int GrandTotalReservations,
     double GrandTotalHours,
     double OverallCancellationRate);
+
+public record DocenteCargaHorariaFilter(DateOnly? FromDate, DateOnly? ToDate, string? PeriodoId);
+
+public record DocenteCargaHorariaItem(
+    string DocenteId,
+    string DocenteNombre,
+    int TotalReservations,
+    double TotalHoras,
+    List<MesCargaHoraria> HorasPorMes);
+
+public record MesCargaHoraria(string Mes, int Reservations, double Horas);
+
+public record DocenteCargaHorariaResponse(
+    List<DocenteCargaHorariaItem> Items,
+    int TotalDocentes,
+    double GranTotalHoras);
