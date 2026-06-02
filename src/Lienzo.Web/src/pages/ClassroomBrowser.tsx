@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Search, MapPin, Users, Filter, X, Map } from 'lucide-react';
+import { Search, MapPin, Users, Filter, X, Map, Clock, AlertTriangle, Wifi } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -13,6 +13,20 @@ import { CardSkeleton } from '@/components/ui/Skeleton';
 import { getClassroomTypeLabel } from '@/lib/utils';
 import CampusMap from '@/components/campus/CampusMap';
 import type { Classroom, Building } from '@/types';
+
+interface CampusStatusClassroom {
+  id: string;
+  name: string;
+  status: 'available' | 'occupied' | 'maintenance' | 'inactive';
+  currentReservation?: { startTime: string; endTime: string; title: string; userName: string } | null;
+}
+
+const STATUS_STYLES: Record<string, { border: string; dot: string; label: string; text: string }> = {
+  available: { border: 'border-l-green-500', dot: 'bg-green-500', label: 'Disponible', text: 'text-green-700' },
+  occupied: { border: 'border-l-red-500', dot: 'bg-red-500', label: 'Ocupado', text: 'text-red-700' },
+  maintenance: { border: 'border-l-yellow-500', dot: 'bg-yellow-500', label: 'Mantenimiento', text: 'text-yellow-700' },
+  inactive: { border: 'border-l-gray-400', dot: 'bg-gray-400', label: 'Inactivo', text: 'text-gray-500' },
+};
 
 export default function ClassroomBrowser() {
   const navigate = useNavigate();
@@ -38,6 +52,24 @@ export default function ClassroomBrowser() {
       return api.get<Classroom[]>('/classrooms', params);
     },
   });
+
+  const { data: campusStatus } = useQuery({
+    queryKey: ['campus-status-browser'],
+    queryFn: () => api.get<{ buildings: { id: string; floors: { classrooms: CampusStatusClassroom[] }[] }[] }>('/campus/status'),
+    refetchInterval: 30_000,
+  });
+
+  const statusMap = useMemo(() => {
+    const map: Record<string, CampusStatusClassroom> = {};
+    for (const b of campusStatus?.buildings || []) {
+      for (const f of b.floors || []) {
+        for (const cr of f.classrooms || []) {
+          map[cr.id] = cr;
+        }
+      }
+    }
+    return map;
+  }, [campusStatus]);
 
   const classroomTypes = [
     { value: 'Lecture', label: 'Aula' },
@@ -201,7 +233,9 @@ export default function ClassroomBrowser() {
                   {sortedClassrooms.map((classroom) => (
                     <Card
                       key={classroom.id}
-                      className="group cursor-pointer hover:shadow-md transition-shadow"
+                      className={`group cursor-pointer hover:shadow-md transition-shadow border-l-4 ${
+                        STATUS_STYLES[statusMap[classroom.id]?.status]?.border || 'border-l-transparent'
+                      }`}
                       onClick={() => navigate(`/classrooms/${classroom.id}`)}
                     >
                       <div
@@ -218,16 +252,38 @@ export default function ClassroomBrowser() {
                       </div>
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <h3 className="font-medium text-primary-800 group-hover:text-accent-600 transition-colors">
-                              {classroom.name}
-                            </h3>
-                            <p className="text-xs text-primary-400 flex items-center gap-1 mt-0.5">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              {statusMap[classroom.id] && (
+                                <span className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${
+                                  STATUS_STYLES[statusMap[classroom.id].status]?.dot || 'bg-gray-400'
+                                }`} />
+                              )}
+                              <h3 className="font-medium text-primary-800 group-hover:text-accent-600 transition-colors truncate">
+                                {classroom.name}
+                              </h3>
+                            </div>
+                            <p className="text-xs text-primary-400 flex items-center gap-1 mt-0.5 ml-5">
                               <MapPin className="h-3 w-3" />
                               {classroom.buildingName} · Piso {classroom.floor}
                             </p>
                           </div>
                         </div>
+
+                        {statusMap[classroom.id] && statusMap[classroom.id].status !== 'available' && (
+                          <div className={`text-xs flex items-center gap-1 mb-2 ml-5 ${
+                            STATUS_STYLES[statusMap[classroom.id].status]?.text || 'text-gray-500'
+                          }`}>
+                            {statusMap[classroom.id].status === 'occupied' ? (
+                              <><Clock className="h-3 w-3" /> Ocupado {statusMap[classroom.id].currentReservation?.startTime?.slice(0,5) || ''}-{statusMap[classroom.id].currentReservation?.endTime?.slice(0,5) || ''}</>
+                            ) : statusMap[classroom.id].status === 'maintenance' ? (
+                              <><Wifi className="h-3 w-3" /> En mantenimiento</>
+                            ) : (
+                              <><AlertTriangle className="h-3 w-3" /> Inactivo</>
+                            )}
+                          </div>
+                        )}
+
                         <div className="flex items-center justify-between mt-3">
                           <div className="flex items-center gap-2">
                             <Badge variant="default">{getClassroomTypeLabel(classroom.type)}</Badge>
