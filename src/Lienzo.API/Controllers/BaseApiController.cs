@@ -18,7 +18,7 @@ public abstract class BaseApiController : ControllerBase
         {
             "NOT_FOUND" => NotFound(new ProblemDetails { Title = result.Error, Status = 404 }),
             "VALIDATION" => UnprocessableEntity(new ProblemDetails { Title = result.Error, Status = 422 }),
-            "FORBIDDEN" => Forbid(),
+            "FORBIDDEN" => StatusCode(403, new ProblemDetails { Title = result.Error, Status = 403 }),
             "CONFLICT" => Conflict(new ProblemDetails { Title = result.Error, Status = 409 }),
             _ => BadRequest(new ProblemDetails { Title = result.Error, Status = 400 })
         };
