@@ -67,6 +67,9 @@ export default function SchedulePage() {
       setSelectedReservation(null);
       navigate(`/asistencia/${data.claseId}`);
     },
+    onError: (err: any) => {
+      alert(err?.message || 'Error al iniciar check-in');
+    },
   });
   const today = new Date();
   const [currentDate, setCurrentDate] = useState(today);

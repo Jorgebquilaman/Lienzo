@@ -2,6 +2,7 @@ using Lienzo.Application.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using NpgsqlTypes;
 
 namespace Lienzo.Infrastructure.Services;
 
@@ -36,7 +37,7 @@ public class SgaAsistenciaService : ISgaAsistenciaService
               ORDER BY mp.apellido, mp.nombres",
             conn);
         cmd.Parameters.AddWithValue("comision", comision);
-        cmd.Parameters.AddWithValue("fecha", fecha.ToString("yyyy-MM-dd"));
+        cmd.Parameters.Add(new NpgsqlParameter("fecha", NpgsqlDbType.Date) { Value = fecha });
 
         await using var r = await cmd.ExecuteReaderAsync();
         while (await r.ReadAsync())
