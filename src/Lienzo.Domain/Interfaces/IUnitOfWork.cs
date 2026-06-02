@@ -18,5 +18,7 @@ public interface IUnitOfWork : IDisposable
     IRepository<ReservationReminder> ReservationReminders { get; }
     IRepository<MaintenanceBlock> MaintenanceBlocks { get; }
     IRepository<ClassroomSurvey> ClassroomSurveys { get; }
+    IRepository<Clase> Clases { get; }
+    IRepository<AsistenciaAlumno> AsistenciasAlumnos { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

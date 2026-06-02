@@ -25,6 +25,8 @@ public class UnitOfWork : IUnitOfWork
     public IRepository<ReservationReminder> ReservationReminders { get; }
     public IRepository<MaintenanceBlock> MaintenanceBlocks { get; }
     public IRepository<ClassroomSurvey> ClassroomSurveys { get; }
+    public IRepository<Clase> Clases { get; }
+    public IRepository<AsistenciaAlumno> AsistenciasAlumnos { get; }
 
     public UnitOfWork(
         LienzoDbContext context,
@@ -56,6 +58,8 @@ public class UnitOfWork : IUnitOfWork
         ReservationReminders = new GenericRepository<ReservationReminder>(context);
         MaintenanceBlocks = new GenericRepository<MaintenanceBlock>(context);
         ClassroomSurveys = new GenericRepository<ClassroomSurvey>(context);
+        Clases = new GenericRepository<Clase>(context);
+        AsistenciasAlumnos = new GenericRepository<AsistenciaAlumno>(context);
     }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

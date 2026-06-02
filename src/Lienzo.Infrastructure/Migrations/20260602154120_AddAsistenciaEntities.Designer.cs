@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Lienzo.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Lienzo.Infrastructure.Migrations
 {
     [DbContext(typeof(LienzoDbContext))]
-    partial class LienzoDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260602154120_AddAsistenciaEntities")]
+    partial class AddAsistenciaEntities
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

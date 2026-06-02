@@ -22,8 +22,7 @@ public class GetCampusStatusQueryHandler : IRequestHandler<GetCampusStatusQuery,
 
     public async Task<Result<CampusStatusResponse>> Handle(GetCampusStatusQuery query, CancellationToken ct)
     {
-        var tz = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time");
-        var localNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+        var localNow = DateTime.Now;
         var today = DateOnly.FromDateTime(localNow);
         var currentTime = TimeOnly.FromDateTime(localNow);
 

@@ -17,6 +17,7 @@ public class ApplicationUser : IdentityUser<Guid>
     public DateTime? RefreshTokenExpiry { get; set; }
     public string? PasswordResetCode { get; set; }
     public DateTime? PasswordResetCodeExpiry { get; set; }
+    public int? SgaPersonaId { get; set; }
 }
 
 public class LienzoDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>
@@ -38,6 +39,8 @@ public class LienzoDbContext : IdentityDbContext<ApplicationUser, IdentityRole<G
     public DbSet<ReservationReminder> ReservationReminders => Set<ReservationReminder>();
     public DbSet<MaintenanceBlock> MaintenanceBlocks => Set<MaintenanceBlock>();
     public DbSet<ClassroomSurvey> ClassroomSurveys => Set<ClassroomSurvey>();
+    public DbSet<Clase> Clases => Set<Clase>();
+    public DbSet<AsistenciaAlumno> AsistenciasAlumnos => Set<AsistenciaAlumno>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -61,6 +64,8 @@ public class LienzoDbContext : IdentityDbContext<ApplicationUser, IdentityRole<G
         builder.Entity<ReservationReminder>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<MaintenanceBlock>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<ClassroomSurvey>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<Clase>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<AsistenciaAlumno>().HasQueryFilter(e => !e.IsDeleted);
     }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

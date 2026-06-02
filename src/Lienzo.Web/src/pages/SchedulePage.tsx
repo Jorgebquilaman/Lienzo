@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ChevronLeft, ChevronRight, Building2, Repeat, CalendarDays, User, Clock, MapPin, Tag, Calendar, Plus,
 } from 'lucide-react';
@@ -57,7 +58,16 @@ function toMinutes(time: string): number {
 }
 
 export default function SchedulePage() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  const checkinMutation = useMutation({
+    mutationFn: (reservationId: string) => api.post('/asistencia/checkin', { reservationId }),
+    onSuccess: (data: any) => {
+      setSelectedReservation(null);
+      navigate(`/asistencia/${data.claseId}`);
+    },
+  });
   const today = new Date();
   const [currentDate, setCurrentDate] = useState(today);
   const [buildingId, setBuildingId] = useState('');
@@ -404,6 +414,17 @@ export default function SchedulePage() {
                   {selectedReservation.actividadPeriodo && <p className="text-xs text-primary-500">Periodo: {selectedReservation.actividadPeriodo}</p>}
                   {selectedReservation.actividadCarrera && <p className="text-xs text-primary-500">Carrera: {selectedReservation.actividadCarrera}</p>}
                   {selectedReservation.actividadDocentes && <p className="text-xs text-primary-500">Docentes: {selectedReservation.actividadDocentes}</p>}
+                  {selectedReservation.status === 'Approved' && (
+                    <Button
+                      variant="accent"
+                      size="sm"
+                      className="w-full mt-2"
+                      onClick={() => checkinMutation.mutate(selectedReservation.id)}
+                      disabled={checkinMutation.isPending}
+                    >
+                      {checkinMutation.isPending ? 'Iniciando...' : 'Tomar Asistencia'}
+                    </Button>
+                  )}
                 </div>
               )}
               {selectedReservation.description && (

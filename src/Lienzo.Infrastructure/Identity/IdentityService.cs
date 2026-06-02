@@ -293,6 +293,12 @@ public class IdentityService : IAuthService
         return Result<bool>.Success(true);
     }
 
+    public async Task<int?> GetSgaPersonaIdAsync(Guid userId)
+    {
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+        return user?.SgaPersonaId;
+    }
+
     private async Task<Result<AuthResponse>> GenerateAuthResponseAsync(ApplicationUser user)
     {
         var roles = await _userManager.GetRolesAsync(user);

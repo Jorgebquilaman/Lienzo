@@ -18,4 +18,5 @@ public interface IAuthService
     Task<Result<AdminUserListItemDto>> AdminUpdateUserAsync(AdminUpdateUserCommand command);
     Task<Result<string>> ForgotPasswordAsync(ForgotPasswordRequest request);
     Task<Result<bool>> ResetPasswordAsync(ResetPasswordRequest request);
+    Task<int?> GetSgaPersonaIdAsync(Guid userId);
 }

@@ -27,6 +27,8 @@ import AdminSurveys from '@/pages/AdminSurveys';
 import AnnouncementsPage from '@/pages/AnnouncementsPage';
 import MySurveys from '@/pages/MySurveys';
 import ProfilePage from '@/pages/ProfilePage';
+import AsistenciaDocente from '@/pages/AsistenciaDocente';
+import AsistenciaAlumno from '@/pages/AsistenciaAlumno';
 
 export default function App() {
   const checkAuth = useAuthStore((s) => s.checkAuth);
@@ -110,6 +112,21 @@ export default function App() {
               <MySurveys />
             </AppShell>
           }
+        />
+        <Route
+          path="/asistencia/:claseId"
+          element={
+            <AppShell>
+              <AsistenciaDocente />
+            </AppShell>
+          }
+        />
+      </Route>
+
+      <Route element={<ProtectedRoute />}>
+        <Route
+          path="/asistencia/marcar"
+          element={<AsistenciaAlumno />}
         />
       </Route>
 
