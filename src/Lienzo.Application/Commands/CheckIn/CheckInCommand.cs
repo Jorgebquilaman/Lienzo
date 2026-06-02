@@ -89,8 +89,7 @@ public class CheckInCommandHandler : IRequestHandler<CheckInCommand, Result<Chec
                 alumno.AlumnoId,
                 alumno.PersonaId,
                 nombre,
-                "",
-                alumno.SgaAsistenciaId);
+                "");
             clase.AgregarAsistencia(asistencia);
         }
 

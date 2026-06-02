@@ -29,15 +29,18 @@ public class SyncSgaCommandHandler : IRequestHandler<SyncSgaCommand, Result<Sync
         if (clase is null)
             return Result<SyncResult>.Failure("Clase no encontrada.");
 
+        if (!clase.SgaClaseId.HasValue)
+            return Result<SyncResult>.Failure("La clase no tiene un ID de SGA asociado.");
+
         var toSync = clase.Asistencias
-            .Where(a => a.SgaAsistenciaId.HasValue && !a.IsDeleted)
-            .Select(a => (a.SgaAsistenciaId!.Value, a.Presente))
+            .Where(a => !a.IsDeleted)
+            .Select(a => (a.SgaAlumnoId, a.Presente))
             .ToList();
 
         if (toSync.Count == 0)
             return Result<SyncResult>.Failure("No hay registros para sincronizar.");
 
-        var syncResult = await _sgaAsistencia.SincronizarAsistenciaAsync(request.ClaseId, toSync);
+        var syncResult = await _sgaAsistencia.SincronizarAsistenciaAsync(clase.SgaClaseId.Value, toSync);
 
         clase.Cerrar();
         _unitOfWork.Clases.Update(clase);

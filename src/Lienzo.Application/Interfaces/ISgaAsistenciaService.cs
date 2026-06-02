@@ -22,5 +22,5 @@ public class SyncSgaResult
 public interface ISgaAsistenciaService
 {
     Task<List<SgaClaseAlumnoInfo>> GetAlumnosPorComisionFechaAsync(int comision, DateOnly fecha);
-    Task<SyncSgaResult> SincronizarAsistenciaAsync(Guid claseId, List<(int SgaAsistenciaId, bool Presente)> asistencias);
+    Task<SyncSgaResult> SincronizarAsistenciaAsync(int sgaClaseId, List<(int AlumnoId, bool Presente)> asistencias);
 }

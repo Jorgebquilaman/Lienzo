@@ -23,7 +23,7 @@ public class AsistenciaAlumno : BaseEntity
         int sgaPersonaId,
         string alumnoNombre,
         string alumnoDocumento,
-        int? sgaAsistenciaId)
+        int? sgaAsistenciaId = null)
     {
         Id = Guid.NewGuid();
         ClaseId = claseId;
@@ -31,7 +31,6 @@ public class AsistenciaAlumno : BaseEntity
         SgaPersonaId = sgaPersonaId;
         AlumnoNombre = alumnoNombre;
         AlumnoDocumento = alumnoDocumento;
-        SgaAsistenciaId = sgaAsistenciaId;
         Presente = false;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;

@@ -26,7 +26,7 @@ public class SgaAsistenciaService : ISgaAsistenciaService
 
         await using var cmd = new NpgsqlCommand(
             @"SELECT sc.clase, sc.fecha, scb.comision, sa.alumno, mp.persona,
-                     mp.apellido, mp.nombres, sca.clase_asistencia
+                     mp.apellido, mp.nombres
               FROM negocio.sga_clases sc
               INNER JOIN negocio.sga_comisiones_bh scb ON scb.banda_horaria = sc.banda_horaria
               INNER JOIN negocio.sga_clases_asistencia sca ON sca.clase = sc.clase
@@ -50,7 +50,7 @@ public class SgaAsistenciaService : ISgaAsistenciaService
                 PersonaId = r.GetInt32(4),
                 Apellido = r.IsDBNull(5) ? "" : r.GetString(5).Trim(),
                 Nombres = r.IsDBNull(6) ? "" : r.GetString(6).Trim(),
-                SgaAsistenciaId = r.GetInt32(7),
+                SgaAsistenciaId = 0,
             });
         }
 
@@ -58,7 +58,7 @@ public class SgaAsistenciaService : ISgaAsistenciaService
         return items;
     }
 
-    public async Task<SyncSgaResult> SincronizarAsistenciaAsync(Guid claseId, List<(int SgaAsistenciaId, bool Presente)> asistencias)
+    public async Task<SyncSgaResult> SincronizarAsistenciaAsync(int sgaClaseId, List<(int AlumnoId, bool Presente)> asistencias)
     {
         var result = new SyncSgaResult();
 
@@ -68,7 +68,7 @@ public class SgaAsistenciaService : ISgaAsistenciaService
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync();
 
-        foreach (var (sgaAsistenciaId, presente) in asistencias)
+        foreach (var (alumnoId, presente) in asistencias)
         {
             try
             {
@@ -76,11 +76,12 @@ public class SgaAsistenciaService : ISgaAsistenciaService
                     @"UPDATE negocio.sga_clases_asistencia
                       SET presente = @presente,
                           fecha_hora_marcado = @ahora
-                      WHERE clase_asistencia = @id",
+                      WHERE clase = @sgaClaseId AND alumno = @alumnoId",
                     conn);
                 cmd.Parameters.AddWithValue("presente", presente);
                 cmd.Parameters.AddWithValue("ahora", DateTime.Now);
-                cmd.Parameters.AddWithValue("id", sgaAsistenciaId);
+                cmd.Parameters.AddWithValue("sgaClaseId", sgaClaseId);
+                cmd.Parameters.AddWithValue("alumnoId", alumnoId);
 
                 var rows = await cmd.ExecuteNonQueryAsync();
                 if (rows > 0)
@@ -88,14 +89,14 @@ public class SgaAsistenciaService : ISgaAsistenciaService
                 else
                 {
                     result.Errores++;
-                    result.DetalleErrores.Add($"No se encontró clase_asistencia {sgaAsistenciaId}");
+                    result.DetalleErrores.Add($"No se encontró registro para clase {sgaClaseId}, alumno {alumnoId}");
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al sincronizar asistencia {SgaAsistenciaId}", sgaAsistenciaId);
+                _logger.LogError(ex, "Error al sincronizar asistencia para clase {SgaClaseId}, alumno {AlumnoId}", sgaClaseId, alumnoId);
                 result.Errores++;
-                result.DetalleErrores.Add($"Error en {sgaAsistenciaId}: {ex.Message}");
+                result.DetalleErrores.Add($"Error en clase {sgaClaseId}, alumno {alumnoId}: {ex.Message}");
             }
         }
 
