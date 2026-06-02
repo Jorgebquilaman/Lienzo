@@ -75,3 +75,26 @@ public record DocenteCargaHorariaResponse(
     List<DocenteCargaHorariaItem> Items,
     int TotalDocentes,
     double GranTotalHoras);
+
+public record ClassroomTimelineFilter(DateOnly? FromDate, DateOnly? ToDate, Guid? ClassroomId, Guid? BuildingId);
+
+public record TimelineReservationItem(
+    Guid Id,
+    Guid ClassroomId,
+    string Title,
+    DateOnly Date,
+    string StartTime,
+    string EndTime,
+    string Status,
+    string? UserName,
+    string? ActividadNombre);
+
+public record ClassroomTimelineItem(
+    Guid ClassroomId,
+    string ClassroomName,
+    List<TimelineReservationItem> Reservations);
+
+public record ClassroomTimelineResponse(
+    List<ClassroomTimelineItem> Items,
+    List<string> Dates,
+    int TotalReservations);

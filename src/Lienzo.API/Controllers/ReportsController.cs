@@ -1,4 +1,5 @@
 using Lienzo.Application.DTOs;
+using Lienzo.Application.Queries.GetClassroomTimeline;
 using Lienzo.Application.Queries.GetDemandMetrics;
 using Lienzo.Application.Queries.GetDocenteCargaHoraria;
 using Lienzo.Application.Queries.GetUsageByProposal;
@@ -36,6 +37,13 @@ public class ReportsController : BaseApiController
     public async Task<IActionResult> GetDocenteCargaHoraria([FromBody] DocenteCargaHorariaFilter filter)
     {
         var result = await Mediator.Send(new GetDocenteCargaHorariaQuery(filter));
+        return HandleResult(result);
+    }
+
+    [HttpPost("classroom-timeline")]
+    public async Task<IActionResult> GetClassroomTimeline([FromBody] ClassroomTimelineFilter filter)
+    {
+        var result = await Mediator.Send(new GetClassroomTimelineQuery(filter));
         return HandleResult(result);
     }
 }

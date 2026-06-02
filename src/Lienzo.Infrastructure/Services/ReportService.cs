@@ -303,4 +303,63 @@ public class ReportService : IReportService
         return Result<DocenteCargaHorariaResponse>.Success(new(
             items, items.Count, Math.Round(items.Sum(i => i.TotalHoras), 2)));
     }
+
+    public async Task<Result<ClassroomTimelineResponse>> GetClassroomTimelineAsync(ClassroomTimelineFilter filter)
+    {
+        var from = filter.FromDate ?? DateOnly.FromDateTime(DateTime.Now.AddMonths(-1));
+        var to = filter.ToDate ?? DateOnly.FromDateTime(DateTime.Now);
+
+        var reservationsQuery = _context.Reservations
+            .Include(r => r.Classroom)
+            .Where(r => !r.IsDeleted && r.Date >= from && r.Date <= to);
+
+        if (filter.ClassroomId.HasValue)
+            reservationsQuery = reservationsQuery.Where(r => r.ClassroomId == filter.ClassroomId.Value);
+
+        if (filter.BuildingId.HasValue)
+            reservationsQuery = reservationsQuery.Where(r => r.Classroom != null && r.Classroom.BuildingId == filter.BuildingId.Value);
+
+        var reservations = await reservationsQuery.OrderBy(r => r.Date).ThenBy(r => r.StartTime).ToListAsync();
+
+        var userIds = reservations.Select(r => r.UserId.ToString()).Distinct().ToList();
+        var users = userIds.Count > 0
+            ? await _context.Users.Where(u => userIds.Contains(u.Id.ToString())).ToListAsync()
+            : [];
+        var userNameMap = users.ToDictionary(u => u.Id.ToString(), u => $"{u.FirstName} {u.LastName}");
+
+        var actividadIds = reservations.Where(r => r.ActividadId.HasValue)
+            .Select(r => r.ActividadId!.Value).Distinct().ToList();
+        var actividads = actividadIds.Count > 0
+            ? await _context.Actividades.Where(a => actividadIds.Contains(a.Id)).ToListAsync()
+            : [];
+        var actividadNameMap = actividads.ToDictionary(a => a.Id, a => a.Nombre);
+
+        var byClassroom = reservations
+            .GroupBy(r => new { r.ClassroomId, Name = r.Classroom?.Name ?? "Sin aula" })
+            .OrderBy(g => g.Key.Name)
+            .Select(g =>
+            {
+                var resItems = g.Select(r => new TimelineReservationItem(
+                    r.Id,
+                    r.ClassroomId,
+                    r.Title,
+                    r.Date,
+                    r.StartTime.ToString(),
+                    r.EndTime.ToString(),
+                    r.Status.ToString(),
+                    userNameMap.GetValueOrDefault(r.UserId.ToString()),
+                    r.ActividadId.HasValue ? actividadNameMap.GetValueOrDefault(r.ActividadId.Value) : null
+                )).ToList();
+
+                return new ClassroomTimelineItem(g.Key.ClassroomId, g.Key.Name, resItems);
+            })
+            .ToList();
+
+        var dateRange = new List<string>();
+        for (var d = from; d <= to; d = d.AddDays(1))
+            dateRange.Add(d.ToString("yyyy-MM-dd"));
+
+        return Result<ClassroomTimelineResponse>.Success(new(
+            byClassroom, dateRange, reservations.Count));
+    }
 }

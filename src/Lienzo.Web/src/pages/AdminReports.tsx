@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { BarChart3, TrendingUp, FileText, Users, Clock } from 'lucide-react';
+import { BarChart3, TrendingUp, FileText, Users, Clock, CalendarDays, MapPin, User, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -82,6 +82,55 @@ interface DocenteCargaHorariaResponse {
   granTotalHoras: number;
 }
 
+interface TimelineReservationItem {
+  id: string;
+  classroomId: string;
+  title: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  status: string;
+  userName: string | null;
+  actividadNombre: string | null;
+}
+
+interface ClassroomTimelineItem {
+  classroomId: string;
+  classroomName: string;
+  reservations: TimelineReservationItem[];
+}
+
+interface ClassroomTimelineResponse {
+  items: ClassroomTimelineItem[];
+  dates: string[];
+  totalReservations: number;
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  Pending: 'Pendiente',
+  Approved: 'Aprobada',
+  Rejected: 'Rechazada',
+  Cancelled: 'Cancelada',
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  Pending: 'bg-yellow-400',
+  Approved: 'bg-green-500',
+  Rejected: 'bg-red-300',
+  Cancelled: 'bg-gray-300',
+  Completed: 'bg-blue-500',
+};
+
+function formatDateShort(dateStr: string): string {
+  const d = new Date(dateStr + 'T12:00:00');
+  return d.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric' });
+}
+
+function formatDateFull(dateStr: string): string {
+  const d = new Date(dateStr + 'T12:00:00');
+  return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
 const MES_LABELS: Record<string, string> = {
   '01': 'Ene', '02': 'Feb', '03': 'Mar', '04': 'Abr',
   '05': 'May', '06': 'Jun', '07': 'Jul', '08': 'Ago',
@@ -101,6 +150,7 @@ export default function AdminReports() {
   const [runDemand, setRunDemand] = useState(false);
   const [runProposal, setRunProposal] = useState(false);
   const [runCarga, setRunCarga] = useState(false);
+  const [runTimeline, setRunTimeline] = useState(false);
   const [groupBy, setGroupBy] = useState('propuesta');
 
   const { data: usageData, isLoading: usageLoading } = useQuery({
@@ -129,6 +179,15 @@ export default function AdminReports() {
     enabled: runCarga,
   });
 
+  const { data: timelineData, isLoading: timelineLoading } = useQuery({
+    queryKey: ['classroomTimeline', fromDate, toDate, runTimeline],
+    queryFn: () => api.post<ClassroomTimelineResponse>('/reports/classroom-timeline', {
+      fromDate: fromDate || null,
+      toDate: toDate || null,
+    }),
+    enabled: runTimeline,
+  });
+
   const { data: proposalData, isLoading: proposalLoading } = useQuery({
     queryKey: ['usageByProposal', fromDate, toDate, groupBy, runProposal],
     queryFn: () => api.post<UsageByProposalResponse>('/reports/usage-by-proposal', {
@@ -152,6 +211,7 @@ export default function AdminReports() {
           <TabsTrigger value="demand"><TrendingUp className="h-4 w-4 mr-1.5" />Métricas de demanda</TabsTrigger>
           <TabsTrigger value="proposal"><Users className="h-4 w-4 mr-1.5" />Por propuesta/docente</TabsTrigger>
           <TabsTrigger value="carga"><Clock className="h-4 w-4 mr-1.5" />Carga horaria docente</TabsTrigger>
+          <TabsTrigger value="timeline"><CalendarDays className="h-4 w-4 mr-1.5" />Historial de aulas</TabsTrigger>
         </TabsList>
 
         <TabsContent value="usage">
@@ -464,6 +524,120 @@ export default function AdminReports() {
               <div className="text-center py-16 text-primary-400">
                 <Clock className="h-12 w-12 mx-auto mb-3 opacity-50" />
                 <p className="font-medium">Selecciona un rango de fechas para calcular la carga horaria</p>
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="timeline">
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-3 items-end bg-white p-4 rounded-lg border border-primary-100">
+              <div>
+                <label className="block text-xs font-medium text-primary-600 mb-1">Desde</label>
+                <Input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-primary-600 mb-1">Hasta</label>
+                <Input type="date" value={toDate} onChange={e => setToDate(e.target.value)} />
+              </div>
+              <Button variant="accent" onClick={() => setRunTimeline(true)}>
+                <CalendarDays className="h-4 w-4 mr-1.5" />
+                Ver historial
+              </Button>
+            </div>
+
+            {timelineLoading ? (
+              <div className="text-center py-16 text-primary-400">Cargando...</div>
+            ) : timelineData ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="bg-white rounded-lg border border-primary-100 p-4">
+                    <p className="text-xs text-primary-500 font-medium uppercase tracking-wider">Aulas</p>
+                    <p className="text-2xl font-bold text-primary-800 mt-1">{timelineData.items.length}</p>
+                  </div>
+                  <div className="bg-white rounded-lg border border-primary-100 p-4">
+                    <p className="text-xs text-primary-500 font-medium uppercase tracking-wider">Reservas</p>
+                    <p className="text-2xl font-bold text-primary-800 mt-1">{timelineData.totalReservations}</p>
+                  </div>
+                  <div className="bg-white rounded-lg border border-primary-100 p-4">
+                    <p className="text-xs text-primary-500 font-medium uppercase tracking-wider">Días</p>
+                    <p className="text-2xl font-bold text-accent-500 mt-1">{timelineData.dates.length}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  {timelineData.items.map((classroom) => {
+                    const resByDate = useMemo(() => {
+                      const map: Record<string, TimelineReservationItem[]> = {};
+                      for (const r of classroom.reservations) {
+                        if (!map[r.date]) map[r.date] = [];
+                        map[r.date].push(r);
+                      }
+                      return map;
+                    }, [classroom.reservations]);
+
+                    return (
+                      <div key={classroom.classroomId} className="bg-white rounded-lg border border-primary-100 overflow-hidden">
+                        <div className="px-4 py-2.5 bg-primary-50/50 border-b border-primary-100 flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-primary-400" />
+                          <h3 className="font-semibold text-primary-800">{classroom.classroomName}</h3>
+                          <span className="text-xs text-primary-400 ml-auto">{classroom.reservations.length} reservas</span>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                          <div className="flex min-w-[600px]">
+                            {/* Day columns */}
+                            {timelineData.dates.map((dateStr) => {
+                              const dayRes = resByDate[dateStr] || [];
+                              const d = new Date(dateStr + 'T12:00:00');
+                              const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+                              const isToday = dateStr === new Date().toISOString().split('T')[0];
+                              return (
+                                <div
+                                  key={dateStr}
+                                  className={`flex-1 min-w-[80px] border-l border-primary-100 ${
+                                    isToday ? 'bg-accent-50/30' : isWeekend ? 'bg-primary-50/30' : ''
+                                  }`}
+                                >
+                                  <div className="text-center py-1.5 border-b border-primary-100 bg-primary-50/30">
+                                    <p className="text-[10px] font-medium text-primary-500 uppercase">
+                                      {d.toLocaleDateString('es-MX', { weekday: 'short' }).replace('.', '')}
+                                    </p>
+                                    <p className="text-xs font-semibold text-primary-700">{d.getDate()}</p>
+                                  </div>
+                                  <div className="p-1 space-y-1 min-h-[60px]">
+                                    {dayRes.map((r) => (
+                                      <div
+                                        key={r.id}
+                                        className={`text-[10px] rounded px-1 py-0.5 text-white truncate cursor-default ${STATUS_COLORS[r.status] || 'bg-primary-400'}`}
+                                        title={`${r.title}\n${r.startTime}-${r.endTime}\n${r.userName || ''}${r.actividadNombre ? `\n${r.actividadNombre}` : ''}`}
+                                      >
+                                        {r.startTime}-{r.endTime}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Legend */}
+                <div className="flex items-center gap-4 text-xs text-primary-400 flex-wrap">
+                  <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-500 inline-block" /> Aprobada</span>
+                  <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-yellow-400 inline-block" /> Pendiente</span>
+                  <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-500 inline-block" /> Completada</span>
+                  <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-gray-300 inline-block" /> Cancelada</span>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-16 text-primary-400">
+                <CalendarDays className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p className="font-medium">Selecciona un rango de fechas para ver el historial de aulas</p>
               </div>
             )}
           </div>
