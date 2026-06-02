@@ -1,3 +1,4 @@
+using Lienzo.Application.Commands.CerrarClase;
 using Lienzo.Application.Commands.CheckIn;
 using Lienzo.Application.Commands.MarcarAsistencia;
 using Lienzo.Application.Commands.SyncSga;
@@ -45,6 +46,13 @@ public class AsistenciaController : BaseApiController
     public async Task<IActionResult> SyncSga(Guid claseId)
     {
         var result = await Mediator.Send(new SyncSgaCommand(claseId));
+        return HandleResult(result);
+    }
+
+    [HttpPost("cerrar/{claseId:guid}")]
+    public async Task<IActionResult> CerrarClase(Guid claseId)
+    {
+        var result = await Mediator.Send(new CerrarClaseCommand(claseId));
         return HandleResult(result);
     }
 

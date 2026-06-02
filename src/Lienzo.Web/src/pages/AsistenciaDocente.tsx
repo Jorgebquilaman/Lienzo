@@ -5,7 +5,7 @@ import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { QRCodeSVG } from 'qrcode.react';
-import { ArrowLeft, CheckCircle2, XCircle, RefreshCw, Users, Clock, MapPin, QrCode, Upload } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, XCircle, RefreshCw, Users, Clock, MapPin, QrCode, Upload, Lock } from 'lucide-react';
 
 interface AsistenciaAlumnoResponse {
   id: string;
@@ -61,6 +61,11 @@ export default function AsistenciaDocente() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['clase', claseId] }),
   });
 
+  const cerrarMutation = useMutation({
+    mutationFn: () => api.post(`/asistencia/cerrar/${claseId}`, {}),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['clase', claseId] }),
+  });
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -102,18 +107,29 @@ export default function AsistenciaDocente() {
               <span className="flex items-center gap-1"><Users className="h-4 w-4" /> {presentCount}/{totalCount}</span>
             </div>
 
-            <div className="flex items-center gap-4">
-              <Badge variant={clase.estado === 'Abierta' ? 'success' : 'default'}>
-                {clase.estado === 'Abierta' ? 'Clase abierta' : 'Cerrada'}
-              </Badge>
-              {syncMutation.isPending && <span className="text-sm text-primary-400 animate-pulse">Sincronizando...</span>}
-              {syncMutation.isSuccess && (
-                <span className="text-sm text-green-600">
-                  Sincronizado: {syncMutation.data?.actualizados} actualizados
-                  {syncMutation.data?.errores > 0 && `, ${syncMutation.data.errores} errores`}
-                </span>
-              )}
-            </div>
+              <div className="flex items-center gap-4">
+                <Badge variant={clase.estado === 'Abierta' ? 'success' : 'default'}>
+                  {clase.estado === 'Abierta' ? 'Clase abierta' : 'Cerrada'}
+                </Badge>
+                {clase.estado === 'Abierta' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => cerrarMutation.mutate()}
+                    disabled={cerrarMutation.isPending}
+                  >
+                    <Lock className="h-4 w-4 mr-1" />
+                    Cerrar clase
+                  </Button>
+                )}
+                {syncMutation.isPending && <span className="text-sm text-primary-400 animate-pulse">Sincronizando...</span>}
+                {syncMutation.isSuccess && (
+                  <span className="text-sm text-green-600">
+                    Sincronizado: {syncMutation.data?.actualizados} actualizados
+                    {syncMutation.data?.errores > 0 && `, ${syncMutation.data.errores} errores`}
+                  </span>
+                )}
+              </div>
           </div>
 
           <div className="bg-white rounded-xl border border-primary-100 overflow-hidden">
