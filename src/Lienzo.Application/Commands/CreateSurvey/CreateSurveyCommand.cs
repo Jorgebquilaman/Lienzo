@@ -26,29 +26,34 @@ public class CreateSurveyCommandHandler : IRequestHandler<CreateSurveyCommand, R
 
         var reservation = await _unitOfWork.Reservations.GetByIdAsync(req.ReservationId);
         if (reservation is null)
-            return Result<SurveyDto>.Failure("Reservation not found", "NOT_FOUND");
+            return Result<SurveyDto>.Failure("Reservación no encontrada", "NOT_FOUND");
 
-        var canRate = reservation.UserId == _currentUser.UserId;
-        if (!canRate && reservation.ActividadId.HasValue)
-        {
-            var actividad = await _unitOfWork.Actividades.GetWithDetailsAsync(reservation.ActividadId.Value);
-            if (actividad is not null)
-            {
-                var userIdStr = _currentUser.UserId.ToString();
-                canRate = actividad.Docentes.Any(d => d.DocenteId == userIdStr);
-            }
-        }
-        if (!canRate)
-            return Result<SurveyDto>.Failure("You can only rate your own reservations", "FORBIDDEN");
+        if (!reservation.ActividadId.HasValue)
+            return Result<SurveyDto>.Failure(
+                "Esta reservación no está vinculada a una actividad académica, por lo que no se puede evaluar",
+                "FORBIDDEN");
+
+        var actividad = await _unitOfWork.Actividades.GetWithDetailsAsync(reservation.ActividadId.Value);
+        if (actividad is null)
+            return Result<SurveyDto>.Failure("La actividad académica vinculada no existe", "NOT_FOUND");
+
+        var userIdStr = _currentUser.UserId.ToString();
+        var esDocente = actividad.Docentes.Any(d => d.DocenteId == userIdStr);
+        if (!esDocente)
+            return Result<SurveyDto>.Failure(
+                "Solo el docente asignado a la actividad puede evaluar esta reservación",
+                "FORBIDDEN");
 
         var now = DateTime.UtcNow;
         var reservationEnd = reservation.Date.ToDateTime(reservation.EndTime);
         if (reservationEnd > now)
-            return Result<SurveyDto>.Failure("You can only rate a reservation after it has ended", "VALIDATION");
+            return Result<SurveyDto>.Failure(
+                "Solo puedes evaluar una reservación después de que haya finalizado",
+                "VALIDATION");
 
         var existing = await _unitOfWork.ClassroomSurveys.GetAllAsync();
         if (existing.Any(s => s.ReservationId == req.ReservationId && s.UserId == _currentUser.UserId))
-            return Result<SurveyDto>.Failure("You have already rated this reservation", "CONFLICT");
+            return Result<SurveyDto>.Failure("Ya has evaluado esta reservación", "CONFLICT");
 
         ClassroomSurvey survey;
         try

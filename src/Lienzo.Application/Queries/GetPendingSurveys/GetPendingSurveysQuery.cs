@@ -33,24 +33,16 @@ public class GetPendingSurveysQueryHandler : IRequestHandler<GetPendingSurveysQu
             .Select(s => s.ReservationId)
             .ToHashSet();
 
-        IEnumerable<Domain.Entities.Reservation> reservations;
-        if (_currentUser.Role == UserRole.Teacher.ToString())
-        {
-            var myReservations = await _unitOfWork.Reservations.GetUserReservationsAsync(_currentUser.UserId);
-            var allRes = await _unitOfWork.Reservations.GetAllWithDetailsAsync();
-            var actividades = await _unitOfWork.Actividades.GetAllWithDetailsAsync();
-            var userIdStr = _currentUser.UserId.ToString();
-            var actividadIds = actividades
-                .Where(a => a.Docentes.Any(d => d.DocenteId == userIdStr))
-                .Select(a => a.Id)
-                .ToHashSet();
-            var docenteReservations = allRes.Where(r => r.ActividadId.HasValue && actividadIds.Contains(r.ActividadId.Value));
-            reservations = myReservations.Concat(docenteReservations).DistinctBy(r => r.Id);
-        }
-        else
-        {
-            reservations = await _unitOfWork.Reservations.GetUserReservationsAsync(_currentUser.UserId);
-        }
+        var allRes = await _unitOfWork.Reservations.GetAllWithDetailsAsync();
+        var actividades = await _unitOfWork.Actividades.GetAllWithDetailsAsync();
+        var userIdStr = _currentUser.UserId.ToString();
+        var actividadIds = actividades
+            .Where(a => a.Docentes.Any(d => d.DocenteId == userIdStr))
+            .Select(a => a.Id)
+            .ToHashSet();
+
+        var reservations = allRes.Where(r =>
+            r.ActividadId.HasValue && actividadIds.Contains(r.ActividadId.Value));
 
         var today = DateOnly.FromDateTime(DateTime.Now);
         var pending = reservations
