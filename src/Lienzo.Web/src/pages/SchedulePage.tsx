@@ -52,6 +52,50 @@ const PERIOD_PALETTE = [
   'bg-fuchsia-500', 'bg-emerald-500', 'bg-violet-500', 'bg-lime-600',
 ];
 
+function ExistingClaseButton({ reservationId }: { reservationId: string }) {
+  const navigate = useNavigate();
+  const { data: claseId } = useQuery({
+    queryKey: ['clase-por-reserva', reservationId],
+    queryFn: () => api.get<Guid | null>(`/asistencia/por-reserva/${reservationId}`),
+  });
+
+  if (claseId) {
+    return (
+      <Button variant="accent" size="sm" className="w-full mt-2" onClick={() => navigate(`/asistencia/${claseId}`)}>
+        Ver Asistencia
+      </Button>
+    );
+  }
+
+  return <CheckInButton reservationId={reservationId} />;
+}
+
+function CheckInButton({ reservationId }: { reservationId: string }) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const checkinMutation = useMutation({
+    mutationFn: (id: string) => api.post('/asistencia/checkin', { reservationId: id }),
+    onSuccess: (data: any) => {
+      navigate(`/asistencia/${data.claseId}`);
+    },
+    onError: (err: any) => {
+      alert(err?.message || 'Error al iniciar check-in');
+    },
+  });
+
+  return (
+    <Button
+      variant="accent"
+      size="sm"
+      className="w-full mt-2"
+      onClick={() => checkinMutation.mutate(reservationId)}
+      disabled={checkinMutation.isPending}
+    >
+      {checkinMutation.isPending ? 'Iniciando...' : 'Tomar Asistencia'}
+    </Button>
+  );
+}
+
 function toMinutes(time: string): number {
   const [h, m] = time.split(':').map(Number);
   return h * 60 + m;
@@ -61,16 +105,6 @@ export default function SchedulePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const checkinMutation = useMutation({
-    mutationFn: (reservationId: string) => api.post('/asistencia/checkin', { reservationId }),
-    onSuccess: (data: any) => {
-      setSelectedReservation(null);
-      navigate(`/asistencia/${data.claseId}`);
-    },
-    onError: (err: any) => {
-      alert(err?.message || 'Error al iniciar check-in');
-    },
-  });
   const today = new Date();
   const [currentDate, setCurrentDate] = useState(today);
   const [buildingId, setBuildingId] = useState('');
@@ -417,17 +451,7 @@ export default function SchedulePage() {
                   {selectedReservation.actividadPeriodo && <p className="text-xs text-primary-500">Periodo: {selectedReservation.actividadPeriodo}</p>}
                   {selectedReservation.actividadCarrera && <p className="text-xs text-primary-500">Carrera: {selectedReservation.actividadCarrera}</p>}
                   {selectedReservation.actividadDocentes && <p className="text-xs text-primary-500">Docentes: {selectedReservation.actividadDocentes}</p>}
-                  {selectedReservation.status === 'Approved' && (
-                    <Button
-                      variant="accent"
-                      size="sm"
-                      className="w-full mt-2"
-                      onClick={() => checkinMutation.mutate(selectedReservation.id)}
-                      disabled={checkinMutation.isPending}
-                    >
-                      {checkinMutation.isPending ? 'Iniciando...' : 'Tomar Asistencia'}
-                    </Button>
-                  )}
+                  {selectedReservation.status === 'Approved' && <ExistingClaseButton reservationId={selectedReservation.id} />}
                 </div>
               )}
               {selectedReservation.description && (

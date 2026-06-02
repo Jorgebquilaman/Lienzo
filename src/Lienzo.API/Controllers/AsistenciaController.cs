@@ -4,6 +4,7 @@ using Lienzo.Application.Commands.SyncSga;
 using Lienzo.Application.Commands.ToggleAsistencia;
 using Lienzo.Application.Interfaces;
 using Lienzo.Application.Queries.GetClase;
+using Lienzo.Application.Queries.GetClasePorReserva;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -44,6 +45,13 @@ public class AsistenciaController : BaseApiController
     public async Task<IActionResult> SyncSga(Guid claseId)
     {
         var result = await Mediator.Send(new SyncSgaCommand(claseId));
+        return HandleResult(result);
+    }
+
+    [HttpGet("por-reserva/{reservationId:guid}")]
+    public async Task<IActionResult> GetClasePorReserva(Guid reservationId)
+    {
+        var result = await Mediator.Send(new GetClasePorReservaQuery(reservationId));
         return HandleResult(result);
     }
 
