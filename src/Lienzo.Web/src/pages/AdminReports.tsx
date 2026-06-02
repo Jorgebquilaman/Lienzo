@@ -198,6 +198,20 @@ export default function AdminReports() {
     enabled: runProposal,
   });
 
+  const classroomResByDate = useMemo(() => {
+    if (!timelineData) return {};
+    const allMaps: Record<string, Record<string, TimelineReservationItem[]>> = {};
+    for (const cr of timelineData.items) {
+      const map: Record<string, TimelineReservationItem[]> = {};
+      for (const r of cr.reservations) {
+        if (!map[r.date]) map[r.date] = [];
+        map[r.date].push(r);
+      }
+      allMaps[cr.classroomId] = map;
+    }
+    return allMaps;
+  }, [timelineData]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -567,14 +581,7 @@ export default function AdminReports() {
 
                 <div className="space-y-6">
                   {timelineData.items.map((classroom) => {
-                    const resByDate = useMemo(() => {
-                      const map: Record<string, TimelineReservationItem[]> = {};
-                      for (const r of classroom.reservations) {
-                        if (!map[r.date]) map[r.date] = [];
-                        map[r.date].push(r);
-                      }
-                      return map;
-                    }, [classroom.reservations]);
+                    const resByDate = classroomResByDate[classroom.classroomId] || {};
 
                     return (
                       <div key={classroom.classroomId} className="bg-white rounded-lg border border-primary-100 overflow-hidden">

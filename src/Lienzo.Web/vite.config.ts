@@ -10,6 +10,7 @@ export default defineConfig({
     },
   },
   server: {
+    allowedHosts: ['monty-ethnohistorical-alphanumerically.ngrok-free.dev'],
     proxy: {
       '/api': {
         target: 'http://localhost:5002',
