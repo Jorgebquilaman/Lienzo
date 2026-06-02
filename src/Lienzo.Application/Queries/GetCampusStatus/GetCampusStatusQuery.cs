@@ -22,9 +22,10 @@ public class GetCampusStatusQueryHandler : IRequestHandler<GetCampusStatusQuery,
 
     public async Task<Result<CampusStatusResponse>> Handle(GetCampusStatusQuery query, CancellationToken ct)
     {
-        var now = DateTime.UtcNow;
-        var today = DateOnly.FromDateTime(now);
-        var currentTime = TimeOnly.FromDateTime(now);
+        var tz = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time");
+        var localNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+        var today = DateOnly.FromDateTime(localNow);
+        var currentTime = TimeOnly.FromDateTime(localNow);
 
         var buildings = (await _unitOfWork.Buildings.GetAllAsync())
             .Where(b => b.IsActive)
@@ -41,7 +42,7 @@ public class GetCampusStatusQueryHandler : IRequestHandler<GetCampusStatusQuery,
 
         var allMaintenance = await _unitOfWork.MaintenanceBlocks.GetAllAsync();
         var activeMaintenance = allMaintenance
-            .Where(m => m.IsActive && m.StartTime <= now && m.EndTime > now)
+            .Where(m => m.IsActive && m.StartTime.ToLocalTime() <= localNow && m.EndTime.ToLocalTime() > localNow)
             .ToList();
 
         var userMap = new Dictionary<Guid, string>();
@@ -108,6 +109,6 @@ public class GetCampusStatusQueryHandler : IRequestHandler<GetCampusStatusQuery,
             return new CampusBuildingDto(building.Id, building.Name, floors);
         }).ToList();
 
-        return Result<CampusStatusResponse>.Success(new(buildingDtos, now));
+        return Result<CampusStatusResponse>.Success(new(buildingDtos, localNow));
     }
 }
