@@ -108,12 +108,12 @@ export default function AsistenciaDocente() {
             </div>
 
               <div className="flex items-center gap-4">
-                <Badge variant={clase.estado === 'Abierta' ? 'success' : 'default'}>
+                <Badge variant={clase.estado === 'Abierta' ? 'approved' : 'default'}>
                   {clase.estado === 'Abierta' ? 'Clase abierta' : 'Cerrada'}
                 </Badge>
                 {clase.estado === 'Abierta' && (
                   <Button
-                    variant="outline"
+                    variant="destructive"
                     size="sm"
                     onClick={() => cerrarMutation.mutate()}
                     disabled={cerrarMutation.isPending}

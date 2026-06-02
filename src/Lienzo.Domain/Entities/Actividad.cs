@@ -9,6 +9,9 @@ public class Actividad : BaseEntity
     public Guid PeriodoId { get; private set; }
     public Guid CarreraId { get; private set; }
 
+    // Comision info from SGA
+    public string? ComisionNombre { get; private set; }
+
     // Optional schedule (comision)
     public Guid? AulaId { get; set; }
     public string? DiaSemana { get; set; }
@@ -27,7 +30,7 @@ public class Actividad : BaseEntity
 
     private Actividad() { }
 
-    public Actividad(string nombre, string codigoMateria, Guid periodoId, Guid carreraId, int? codigoExterno = null)
+    public Actividad(string nombre, string codigoMateria, Guid periodoId, Guid carreraId, int? codigoExterno = null, string? comisionNombre = null)
     {
         Id = Guid.NewGuid();
         Nombre = nombre;
@@ -35,6 +38,7 @@ public class Actividad : BaseEntity
         PeriodoId = periodoId;
         CarreraId = carreraId;
         CodigoExterno = codigoExterno;
+        ComisionNombre = comisionNombre;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
     }
@@ -60,6 +64,12 @@ public class Actividad : BaseEntity
     public void SetCarrera(Guid carreraId)
     {
         CarreraId = carreraId;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetComisionNombre(string? comisionNombre)
+    {
+        ComisionNombre = comisionNombre;
         UpdatedAt = DateTime.UtcNow;
     }
 

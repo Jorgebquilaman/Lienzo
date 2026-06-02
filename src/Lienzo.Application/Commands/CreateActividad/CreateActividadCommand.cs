@@ -69,7 +69,8 @@ public class CreateActividadCommandHandler : IRequestHandler<CreateActividadComm
             saved.AulaId, saved.Aula?.Name,
             saved.DiaSemana, saved.HoraInicio?.ToString("HH:mm"), saved.HoraFin?.ToString("HH:mm"),
             saved.Docentes.Select(d => d.DocenteId).ToList(),
-            docenteNames
+            docenteNames,
+            saved.ComisionNombre
         ));
     }
 

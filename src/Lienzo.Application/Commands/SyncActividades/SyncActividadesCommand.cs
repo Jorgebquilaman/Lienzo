@@ -9,7 +9,7 @@ namespace Lienzo.Application.Commands.SyncActividades;
 
 public record SyncActividadesCommand(short AnioAcademico) : IRequest<Result<SyncActividadesResult>>;
 
-public record SyncActividadesResult(int Creados, int Existentes, int SinPeriodo, int SinCarrera, int TotalExterno, int DocentesAsignados, int Corregidos);
+public record SyncActividadesResult(int Creados, int Existentes, int SinPeriodo, int SinCarrera, int TotalExterno, int DocentesAsignados, int Corregidos, int HorariosAsignados);
 
 public class SyncActividadesCommandHandler : IRequestHandler<SyncActividadesCommand, Result<SyncActividadesResult>>
 {
@@ -28,7 +28,7 @@ public class SyncActividadesCommandHandler : IRequestHandler<SyncActividadesComm
     {
         var external = await _syncService.GetActividadesAsync(command.AnioAcademico);
         if (external.Count == 0)
-            return Result<SyncActividadesResult>.Success(new SyncActividadesResult(0, 0, 0, 0, 0, 0, 0));
+            return Result<SyncActividadesResult>.Success(new SyncActividadesResult(0, 0, 0, 0, 0, 0, 0, 0));
 
         var periodos = (await _unitOfWork.Periodos.GetAllAsync()).ToList();
         var periodosByCodigo = periodos.Where(p => p.CodigoExterno.HasValue)
@@ -53,6 +53,11 @@ public class SyncActividadesCommandHandler : IRequestHandler<SyncActividadesComm
         var existingByCodigo = existing.Where(a => a.CodigoExterno.HasValue && !a.IsDeleted)
             .ToDictionary(a => a.CodigoExterno!.Value);
 
+        // Build aula name -> id map
+        var aulas = (await _unitOfWork.Classrooms.GetAllAsync())
+            .Where(c => !c.IsDeleted)
+            .ToDictionary(c => c.Name.Trim().ToLowerInvariant(), c => c.Id);
+
         var usersResult = await _authService.GetAllUsersAsync();
         var users = usersResult.Value ?? [];
         var nameToUserId = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
@@ -69,6 +74,7 @@ public class SyncActividadesCommandHandler : IRequestHandler<SyncActividadesComm
         var noCarrera = 0;
         var docentesAsignados = 0;
         var corregidos = 0;
+        var horariosAsignados = 0;
 
         Carrera? ResolveCarrera(ExternalActividadInfo ext)
         {
@@ -128,7 +134,8 @@ public class SyncActividadesCommandHandler : IRequestHandler<SyncActividadesComm
                         ext.ElementoCodigo,
                         periodo.Id,
                         carrera?.Id ?? defaultCarrera.Id,
-                        ext.Comision);
+                        ext.Comision,
+                        ext.Nombre);
 
                     await _unitOfWork.Actividades.AddAsync(actividad);
                     existing.Add(actividad);
@@ -136,6 +143,39 @@ public class SyncActividadesCommandHandler : IRequestHandler<SyncActividadesComm
                     created++;
                 }
             }
+
+            // Update comision nombre and schedule for both new and existing
+            var needsUpdate = false;
+
+            if (actividad.ComisionNombre != ext.Nombre)
+            {
+                actividad.SetComisionNombre(ext.Nombre);
+                needsUpdate = true;
+            }
+
+            if (ext.DiaSemana is not null && ext.HoraInicio is not null && ext.HoraFin is not null)
+            {
+                Guid? aulaId = null;
+                if (ext.AulaNombre is not null && aulas.TryGetValue(ext.AulaNombre.ToLowerInvariant(), out var matchedAulaId))
+                    aulaId = matchedAulaId;
+
+                if (actividad.DiaSemana != ext.DiaSemana ||
+                    actividad.HoraInicio != ext.HoraInicio ||
+                    actividad.HoraFin != ext.HoraFin ||
+                    actividad.AulaId != aulaId)
+                {
+                    actividad.AulaId = aulaId;
+                    actividad.DiaSemana = ext.DiaSemana;
+                    actividad.HoraInicio = ext.HoraInicio;
+                    actividad.HoraFin = ext.HoraFin;
+                    actividad.UpdatedAt = DateTime.UtcNow;
+                    horariosAsignados++;
+                    needsUpdate = true;
+                }
+            }
+
+            if (needsUpdate)
+                _unitOfWork.Actividades.Update(actividad);
 
             if (ext.DocenteNames.Count > 0)
             {
@@ -158,6 +198,6 @@ public class SyncActividadesCommandHandler : IRequestHandler<SyncActividadesComm
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-        return Result<SyncActividadesResult>.Success(new SyncActividadesResult(created, existed, noPeriodo, noCarrera, external.Count, docentesAsignados, corregidos));
+        return Result<SyncActividadesResult>.Success(new SyncActividadesResult(created, existed, noPeriodo, noCarrera, external.Count, docentesAsignados, corregidos, horariosAsignados));
     }
 }

@@ -33,6 +33,10 @@ public class ActividadConfiguration : IEntityTypeConfiguration<Actividad>
         builder.Property(e => e.CodigoExterno)
             .HasColumnName("CodigoExterno");
 
+        builder.Property(e => e.ComisionNombre)
+            .HasColumnName("ComisionNombre")
+            .HasMaxLength(200);
+
         builder.Property(e => e.AulaId)
             .HasColumnName("AulaId");
 

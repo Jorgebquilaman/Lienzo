@@ -12,6 +12,13 @@ public class ExternalActividadInfo
     public int? PropuestaId { get; init; }
     public string? PropuestaCodigo { get; init; }
     public List<string> DocenteNames { get; set; } = [];
+
+    // Schedule from sga_asignaciones
+    public string? DiaSemana { get; init; }
+    public TimeOnly? HoraInicio { get; init; }
+    public TimeOnly? HoraFin { get; init; }
+    public int? EspacioId { get; init; }
+    public string? AulaNombre { get; set; }
 }
 
 public interface ISyncActividadService
