@@ -46,6 +46,7 @@ export default function AdminActividades() {
   const [hasSchedule, setHasSchedule] = useState(false);
   const [docenteSearch, setDocenteSearch] = useState('');
   const [showDocenteDropdown, setShowDocenteDropdown] = useState(false);
+  const [docenteNames, setDocenteNames] = useState<Map<string, string>>(new Map());
   const docenteSearchRef = useRef<HTMLDivElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterPeriodoId, setFilterPeriodoId] = useState('');
@@ -172,7 +173,7 @@ export default function AdminActividades() {
   const openCreate = () => {
     setEditing(null);
     setNombre(''); setCodigoMateria(''); setPeriodoId(''); setCarreraId('');
-    setDocenteIds([]); setAulaId(''); setDiaSemana(''); setHoraInicio(''); setHoraFin(''); setHasSchedule(false);
+    setDocenteIds([]); setDocenteNames(new Map()); setAulaId(''); setDiaSemana(''); setHoraInicio(''); setHoraFin(''); setHasSchedule(false);
     setDialogOpen(true);
   };
 
@@ -181,6 +182,9 @@ export default function AdminActividades() {
     setNombre(a.nombre); setCodigoMateria(a.codigoMateria);
     setPeriodoId(a.periodoId); setCarreraId(a.carreraId);
     setDocenteIds([...new Set(a.docenteIds)]);
+    // Pre-build name map from docentesNombres for fallback
+    const names = (a.docentesNombres || '').split(',').map(s => s.trim());
+    setDocenteNames(new Map(a.docenteIds.map((id, i) => [id, names[i] || id])));
     setAulaId(a.aulaId || ''); setDiaSemana(a.diaSemana || '');
     setHoraInicio(a.horaInicio || ''); setHoraFin(a.horaFin || '');
     setHasSchedule(!!a.aulaId);
@@ -335,9 +339,10 @@ export default function AdminActividades() {
                     {docenteIds.length === 0 && <p className="text-xs text-primary-400">Ningún docente asignado</p>}
                     {docenteIds.map(id => {
                       const u = (users as User[]).find(x => x.id === id);
+                      const name = u ? `${u.firstName} ${u.lastName}` : (docenteNames.get(id) || id);
                       return (
                         <span key={id} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-accent-100 text-accent-800 text-xs font-medium">
-                          {u ? `${u.firstName} ${u.lastName}` : id}
+                          {name}
                           <button type="button" onClick={() => removeDocente(id)} className="hover:text-red-600 transition-colors">
                             <X className="h-3 w-3" />
                           </button>
