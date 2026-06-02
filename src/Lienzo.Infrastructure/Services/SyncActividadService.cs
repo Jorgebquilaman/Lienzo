@@ -23,7 +23,7 @@ public class SyncActividadService : ISyncActividadService
         await conn.OpenAsync();
 
         await using var cmd = new NpgsqlCommand(
-            @"SELECT c.comision, c.nombre, e.nombre, e.codigo, pl.periodo_lectivo, p.periodo, COALESCE(esp.edificacion, 0), cp.propuesta, sp.codigo
+            @"SELECT c.comision, c.nombre, c.nombre || ' - ' || e.nombre, e.codigo, pl.periodo_lectivo, p.periodo, COALESCE(esp.edificacion, 0), cp.propuesta, sp.codigo
               FROM negocio.sga_comisiones c
               JOIN negocio.sga_periodos_lectivos pl ON pl.periodo_lectivo = c.periodo_lectivo
               JOIN negocio.sga_periodos p ON p.periodo = pl.periodo

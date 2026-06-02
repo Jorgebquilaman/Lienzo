@@ -100,6 +100,11 @@ public class SyncActividadesCommandHandler : IRequestHandler<SyncActividadesComm
                     actividad.SetCarrera(correctCarrera.Id);
                     corregidos++;
                 }
+
+                if (actividad.Nombre != ext.ElementoNombre)
+                {
+                    actividad.UpdateInfo(ext.ElementoNombre, ext.ElementoCodigo, actividad.PeriodoId, actividad.CarreraId);
+                }
             }
             else
             {
@@ -117,6 +122,11 @@ public class SyncActividadesCommandHandler : IRequestHandler<SyncActividadesComm
                     {
                         actividad.SetCarrera(correctCarrera.Id);
                         corregidos++;
+                    }
+
+                    if (actividad.Nombre != ext.ElementoNombre)
+                    {
+                        actividad.UpdateInfo(ext.ElementoNombre, ext.ElementoCodigo, actividad.PeriodoId, actividad.CarreraId);
                     }
                     existed++;
                 }
