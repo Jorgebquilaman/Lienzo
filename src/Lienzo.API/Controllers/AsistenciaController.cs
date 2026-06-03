@@ -6,6 +6,7 @@ using Lienzo.Application.Commands.ToggleAsistencia;
 using Lienzo.Application.Interfaces;
 using Lienzo.Application.Queries.GetClase;
 using Lienzo.Application.Queries.GetClasePorReserva;
+using Lienzo.Application.Queries.GetClasesList;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,6 +15,12 @@ namespace Lienzo.API.Controllers;
 [Authorize]
 public class AsistenciaController : BaseApiController
 {
+    private readonly ISystemSettingService _settings;
+
+    public AsistenciaController(ISystemSettingService settings)
+    {
+        _settings = settings;
+    }
     [HttpPost("checkin")]
     public async Task<IActionResult> CheckIn([FromBody] CheckInRequest request)
     {
@@ -64,10 +71,26 @@ public class AsistenciaController : BaseApiController
     }
 
     [HttpGet("qr/{claseId:guid}")]
-    public IActionResult GetQrUrl(Guid claseId)
+    public async Task<IActionResult> GetQrUrl(Guid claseId)
     {
-        var url = $"{Request.Scheme}://{Request.Host}/asistencia/marcar?claseId={claseId}";
+        var publicUrl = await _settings.GetValueAsync("PublicUrl");
+        var baseUrl = !string.IsNullOrEmpty(publicUrl)
+            ? publicUrl.TrimEnd('/')
+            : $"{Request.Scheme}://{Request.Host}";
+        var url = $"{baseUrl}/asistencia/marcar?claseId={claseId}";
         return Ok(new { url });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetList(
+        [FromQuery] DateOnly? desde,
+        [FromQuery] DateOnly? hasta,
+        [FromQuery] Guid? actividadId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20)
+    {
+        var result = await Mediator.Send(new GetClasesListQuery(desde, hasta, actividadId, page, pageSize));
+        return HandleResult(result);
     }
 }
 

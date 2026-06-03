@@ -117,6 +117,7 @@ public static class DependencyInjection
         services.AddScoped<ISyncCarreraService, SyncCarreraService>();
         services.AddScoped<ISyncEstudianteService, SyncEstudianteService>();
         services.AddScoped<ISgaAsistenciaService, SgaAsistenciaService>();
+        services.AddScoped<ISystemSettingService, SystemSettingService>();
 
         services.AddScoped<IRepository<ReservationReminder>, GenericRepository<ReservationReminder>>();
 

@@ -24,11 +24,13 @@ import AdminActividades from '@/pages/AdminActividades';
 import AdminReports from '@/pages/AdminReports';
 import AdminMaintenance from '@/pages/AdminMaintenance';
 import AdminSurveys from '@/pages/AdminSurveys';
+import AdminSettings from '@/pages/AdminSettings';
 import AnnouncementsPage from '@/pages/AnnouncementsPage';
 import MySurveys from '@/pages/MySurveys';
 import ProfilePage from '@/pages/ProfilePage';
 import AsistenciaDocente from '@/pages/AsistenciaDocente';
 import AsistenciaAlumno from '@/pages/AsistenciaAlumno';
+import AsistenciasList from '@/pages/AsistenciasList';
 
 export default function App() {
   const checkAuth = useAuthStore((s) => s.checkAuth);
@@ -130,6 +132,17 @@ export default function App() {
         />
       </Route>
 
+      <Route element={<ProtectedRoute />}>
+        <Route
+          path="/asistencias"
+          element={
+            <AppShell>
+              <AsistenciasList />
+            </AppShell>
+          }
+        />
+      </Route>
+
       <Route element={<AdminRoute />}>
         <Route
           path="/admin/reservations"
@@ -216,6 +229,14 @@ export default function App() {
           element={
             <AppShell>
               <AdminSurveys />
+            </AppShell>
+          }
+        />
+        <Route
+          path="/admin/settings"
+          element={
+            <AppShell>
+              <AdminSettings />
             </AppShell>
           }
         />

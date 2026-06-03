@@ -27,6 +27,7 @@ public class UnitOfWork : IUnitOfWork
     public IRepository<ClassroomSurvey> ClassroomSurveys { get; }
     public IRepository<Clase> Clases { get; }
     public IRepository<AsistenciaAlumno> AsistenciasAlumnos { get; }
+    public IRepository<SystemSetting> SystemSettings { get; }
 
     public UnitOfWork(
         LienzoDbContext context,
@@ -60,6 +61,7 @@ public class UnitOfWork : IUnitOfWork
         ClassroomSurveys = new GenericRepository<ClassroomSurvey>(context);
         Clases = new GenericRepository<Clase>(context);
         AsistenciasAlumnos = new GenericRepository<AsistenciaAlumno>(context);
+        SystemSettings = new GenericRepository<SystemSetting>(context);
     }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

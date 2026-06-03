@@ -26,6 +26,8 @@ import {
   BarChart3,
   Wrench,
   Star,
+  ClipboardCheck,
+  Globe,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
@@ -41,6 +43,7 @@ const navItems = [
   { path: '/classrooms', label: 'Aulas', icon: DoorOpen },
   { path: '/reservations', label: 'Reservaciones', icon: CalendarCheck },
   { path: '/schedule', label: 'Horario', icon: CalendarDays },
+  { path: '/asistencias', label: 'Asistencias', icon: ClipboardCheck },
   { path: '/announcements', label: 'Anuncios', icon: Megaphone },
   { path: '/surveys', label: 'Mis Encuestas', icon: Star },
 ];
@@ -50,6 +53,7 @@ const adminNavItems = [
   { path: '/admin/classrooms', label: 'Aulas', icon: DoorOpen },
   { path: '/admin/buildings', label: 'Edificios', icon: Building2 },
   { path: '/admin/reports', label: 'Reportes', icon: BarChart3 },
+  { path: '/admin/settings', label: 'Configuración', icon: Globe },
   { path: '/admin/maintenance', label: 'Mantenimiento', icon: Wrench },
   { path: '/admin/surveys', label: 'Encuestas', icon: Star },
   { path: '/admin/holidays', label: 'Feriados', icon: CalendarX2 },
