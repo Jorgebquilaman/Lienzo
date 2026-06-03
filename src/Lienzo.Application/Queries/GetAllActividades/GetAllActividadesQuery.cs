@@ -48,7 +48,8 @@ public class GetAllActividadesQueryHandler : IRequestHandler<GetAllActividadesQu
                 a.DiaSemana, a.HoraInicio?.ToString("HH:mm"), a.HoraFin?.ToString("HH:mm"),
                 a.Docentes.Select(d => d.DocenteId).ToList(),
                 docNames,
-                a.ComisionNombre
+                a.ComisionNombre,
+                a.DiasDictado
             );
         }).ToList();
 

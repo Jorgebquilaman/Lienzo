@@ -17,6 +17,7 @@ public class Actividad : BaseEntity
     public string? DiaSemana { get; set; }
     public TimeOnly? HoraInicio { get; set; }
     public TimeOnly? HoraFin { get; set; }
+    public string? DiasDictado { get; set; }
 
     // Navigation
     public Periodo Periodo { get; private set; } = null!;

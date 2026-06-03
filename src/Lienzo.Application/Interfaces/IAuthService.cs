@@ -19,4 +19,5 @@ public interface IAuthService
     Task<Result<string>> ForgotPasswordAsync(ForgotPasswordRequest request);
     Task<Result<bool>> ResetPasswordAsync(ResetPasswordRequest request);
     Task<int?> GetSgaPersonaIdAsync(Guid userId);
+    Task<List<(Guid UserId, string Email)>> GetUsersBySgaPersonaIdsAsync(List<int> personaIds);
 }

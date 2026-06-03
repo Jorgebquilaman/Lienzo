@@ -68,6 +68,7 @@ public class CheckInCommandHandler : IRequestHandler<CheckInCommand, Result<Chec
             return Result<CheckInResult>.Failure("No se encontraron alumnos inscriptos en SGA para esta clase.");
 
         // Create Clase
+        int? claseSgaClaseId = alumnosSga[0].SgaClaseId > 0 ? alumnosSga[0].SgaClaseId : null;
         var clase = new Clase(
             reservation.Id,
             reservation.ActividadId.Value,
@@ -76,11 +77,10 @@ public class CheckInCommandHandler : IRequestHandler<CheckInCommand, Result<Chec
             reservation.StartTime,
             reservation.EndTime,
             actividad.CodigoExterno.Value,
-            alumnosSga[0].SgaClaseId,
+            claseSgaClaseId,
             _currentUser.UserId);
 
         // Create AsistenciaAlumno for each SGA student
-        var sgaClaseId = alumnosSga[0].SgaClaseId;
         foreach (var alumno in alumnosSga)
         {
             var nombre = $"{alumno.Apellido}, {alumno.Nombres}".Trim(',', ' ');

@@ -150,6 +150,23 @@ public class Reservation : BaseEntity
             DateTime.UtcNow));
     }
 
+    public void ChangeClassroom(Guid newClassroomId)
+    {
+        if (Status != ReservationStatus.Approved)
+            throw new InvalidOperationException("Solo reservas aprobadas pueden cambiarse de aula.");
+
+        var oldClassroomId = ClassroomId;
+        ClassroomId = newClassroomId;
+        UpdatedAt = DateTime.UtcNow;
+
+        AddDomainEvent(new ReservationClassroomChangedEvent(
+            Id,
+            oldClassroomId,
+            newClassroomId,
+            UserId,
+            DateTime.UtcNow));
+    }
+
     private void SetTitle(string title)
     {
         if (string.IsNullOrWhiteSpace(title))

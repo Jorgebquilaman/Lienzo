@@ -172,12 +172,14 @@ public class SyncActividadesCommandHandler : IRequestHandler<SyncActividadesComm
                 if (actividad.DiaSemana != ext.DiaSemana ||
                     actividad.HoraInicio != ext.HoraInicio ||
                     actividad.HoraFin != ext.HoraFin ||
-                    actividad.AulaId != aulaId)
+                    actividad.AulaId != aulaId ||
+                    actividad.DiasDictado != ext.DiasDictado)
                 {
                     actividad.AulaId = aulaId;
                     actividad.DiaSemana = ext.DiaSemana;
                     actividad.HoraInicio = ext.HoraInicio;
                     actividad.HoraFin = ext.HoraFin;
+                    actividad.DiasDictado = ext.DiasDictado;
                     actividad.UpdatedAt = DateTime.UtcNow;
                     horariosAsignados++;
                     needsUpdate = true;

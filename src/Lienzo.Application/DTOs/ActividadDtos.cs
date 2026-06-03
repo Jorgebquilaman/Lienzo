@@ -8,7 +8,8 @@ public record ActividadDto(
     string? DiaSemana, string? HoraInicio, string? HoraFin,
     List<string> DocenteIds,
     string? DocentesNombres,
-    string? ComisionNombre = null
+    string? ComisionNombre = null,
+    string? DiasDictado = null
 );
 
 public record CreateActividadRequest(

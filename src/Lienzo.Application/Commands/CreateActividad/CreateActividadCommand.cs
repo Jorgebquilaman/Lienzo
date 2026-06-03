@@ -70,7 +70,8 @@ public class CreateActividadCommandHandler : IRequestHandler<CreateActividadComm
             saved.DiaSemana, saved.HoraInicio?.ToString("HH:mm"), saved.HoraFin?.ToString("HH:mm"),
             saved.Docentes.Select(d => d.DocenteId).ToList(),
             docenteNames,
-            saved.ComisionNombre
+            saved.ComisionNombre,
+            saved.DiasDictado
         ));
     }
 

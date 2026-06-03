@@ -1,6 +1,7 @@
 using Lienzo.Application.Commands.ApproveReservation;
 using Lienzo.Application.Commands.CancelReservation;
 using Lienzo.Application.Commands.CreateReservation;
+using Lienzo.Application.Commands.MoveReservation;
 using Lienzo.Application.Commands.RejectReservation;
 using Lienzo.Application.Commands.UpdateReservation;
 using Lienzo.Application.DTOs;
@@ -84,4 +85,14 @@ public class ReservationsController : BaseApiController
         var result = await Mediator.Send(new CancelReservationCommand(id));
         return HandleResult(result);
     }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPatch("{id:guid}/move")]
+    public async Task<IActionResult> Move(Guid id, [FromBody] MoveReservationRequest request)
+    {
+        var result = await Mediator.Send(new MoveReservationCommand(id, request.NewClassroomId, request.ApplyToFuture));
+        return HandleResult(result);
+    }
+
+    public record MoveReservationRequest(Guid NewClassroomId, bool ApplyToFuture);
 }

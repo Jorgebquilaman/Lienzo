@@ -20,6 +20,7 @@ interface Actividad {
   aulaId?: string; aulaNombre?: string;
   diaSemana?: string; horaInicio?: string; horaFin?: string;
   docenteIds: string[]; docentesNombres?: string;
+  diasDictado?: string;
 }
 
 const DAYS = [
@@ -274,30 +275,37 @@ export default function AdminActividades() {
             <TableHeader>
               <TableRow>
                 <TableHead><button type="button" onClick={() => toggleSort('nombre')} className="inline-flex items-center gap-1 font-medium text-primary-600 hover:text-primary-800">{sortKey === 'nombre' ? (sortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-50" />}Nombre</button></TableHead>
-                <TableHead><button type="button" onClick={() => toggleSort('codigoMateria')} className="inline-flex items-center gap-1 font-medium text-primary-600 hover:text-primary-800">{sortKey === 'codigoMateria' ? (sortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-50" />}Código</button></TableHead>
+                <TableHead className="hidden"><button type="button" onClick={() => toggleSort('codigoMateria')} className="inline-flex items-center gap-1 font-medium text-primary-600 hover:text-primary-800">{sortKey === 'codigoMateria' ? (sortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-50" />}Código</button></TableHead>
                 <TableHead><button type="button" onClick={() => toggleSort('periodoNombre')} className="inline-flex items-center gap-1 font-medium text-primary-600 hover:text-primary-800">{sortKey === 'periodoNombre' ? (sortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-50" />}Periodo</button></TableHead>
-                <TableHead><button type="button" onClick={() => toggleSort('carreraNombre')} className="inline-flex items-center gap-1 font-medium text-primary-600 hover:text-primary-800">{sortKey === 'carreraNombre' ? (sortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-50" />}Carrera</button></TableHead>
+                <TableHead className="hidden"><button type="button" onClick={() => toggleSort('carreraNombre')} className="inline-flex items-center gap-1 font-medium text-primary-600 hover:text-primary-800">{sortKey === 'carreraNombre' ? (sortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-50" />}Carrera</button></TableHead>
                 <TableHead><button type="button" onClick={() => toggleSort('diaSemana')} className="inline-flex items-center gap-1 font-medium text-primary-600 hover:text-primary-800">{sortKey === 'diaSemana' ? (sortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />) : <ArrowUpDown className="h-3 w-3 opacity-50" />}Horario</button></TableHead>
+                <TableHead>Días</TableHead>
                 <TableHead>Docentes</TableHead>
                 <TableHead className="w-24 text-right">Acción</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sorted.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center text-primary-400 py-8">Sin resultados</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center text-primary-400 py-8">Sin resultados</TableCell></TableRow>
               ) : sorted.map(a => (
                 <TableRow key={a.id}>
                   <TableCell className="font-medium">{a.nombre}</TableCell>
-                  <TableCell className="text-primary-500">{a.codigoMateria}</TableCell>
+                  <TableCell className="text-primary-500 hidden">{a.codigoMateria}</TableCell>
                   <TableCell className="text-primary-500">{a.periodoNombre || '—'}</TableCell>
-                  <TableCell className="text-primary-500">{a.carreraNombre || '—'}</TableCell>
+                  <TableCell className="text-primary-500 hidden">{a.carreraNombre || '—'}</TableCell>
                   <TableCell className="text-primary-500 text-sm">
-                    {a.aulaId ? (
+                    {a.diaSemana ? (
                       <span className="flex items-center gap-1">
                         <Repeat className="h-3 w-3 text-accent-500" />
-                        {a.diaSemana ? DAYS.find(d => d.value === a.diaSemana)?.label.slice(0, 3) : ''} {a.horaInicio}-{a.horaFin}
+                        {DAYS.find(d => d.value === a.diaSemana)?.label.slice(0, 3)} {a.horaInicio}-{a.horaFin}
+                        {a.aulaNombre && <span className="text-primary-400 ml-1">· {a.aulaNombre}</span>}
                       </span>
                     ) : <span className="text-primary-300">Sin horario</span>}
+                  </TableCell>
+                  <TableCell className="text-primary-500 text-xs">
+                    {a.diasDictado ? (
+                      a.diasDictado.split(',').map(d => DAYS.find(x => x.value === d.trim())?.label.slice(0, 3) || d.trim()).join(', ')
+                    ) : <span className="text-primary-300">—</span>}
                   </TableCell>
                   <TableCell className="text-primary-500 text-xs max-w-[200px] truncate">
                     {a.docentesNombres || '—'}
@@ -322,18 +330,15 @@ export default function AdminActividades() {
             <DialogHeader>
               <DialogTitle>{editing ? 'Editar Actividad' : 'Nueva Actividad'}</DialogTitle>
             </DialogHeader>
-            <DialogBody className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+            <DialogBody>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-4 gap-y-4">
                 <Input label="Nombre" placeholder="Ej: Álgebra I" value={nombre} onChange={e => setNombre(e.target.value)} required />
                 <Input label="Código materia" placeholder="Ej: MAT-101" value={codigoMateria} onChange={e => setCodigoMateria(e.target.value)} required />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
                 <Select label="Periodo" placeholder="Seleccionar..." value={periodoId} onChange={e => setPeriodoId(e.target.value)} options={periodos.map(p => ({ value: p.id, label: `${p.nombre} ${p.anio}` }))} required />
                 <Select label="Carrera" placeholder="Seleccionar..." value={carreraId} onChange={e => setCarreraId(e.target.value)} options={carreras.map(c => ({ value: c.id, label: c.nombre }))} required />
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-primary-700 mb-2">Docentes a cargo</label>
+                <div className="">
+                  <label className="block text-sm font-medium text-primary-700 mb-2">Docentes a cargo</label>
                 <div className="space-y-2">
                   <div className="flex flex-wrap gap-2 min-h-[2rem] p-2 border border-primary-200 rounded-lg bg-white">
                     {docenteIds.length === 0 && <p className="text-xs text-primary-400">Ningún docente asignado</p>}
@@ -379,7 +384,7 @@ export default function AdminActividades() {
                 </div>
               </div>
 
-              <div className="border-t border-primary-100 pt-4">
+              <div className="lg:col-start-2">
                 <label className="flex items-center gap-2 cursor-pointer mb-3">
                   <input type="checkbox" className="rounded border-primary-300" checked={hasSchedule} onChange={e => setHasSchedule(e.target.checked)} />
                   <span className="text-sm font-medium text-primary-700">Asignar horario (comisión)</span>
@@ -396,6 +401,7 @@ export default function AdminActividades() {
                   </div>
                 )}
               </div>
+            </div>
             </DialogBody>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={closeDialog}>Cancelar</Button>

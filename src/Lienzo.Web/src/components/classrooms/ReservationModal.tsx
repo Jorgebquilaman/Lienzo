@@ -6,6 +6,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from '@/components/ui/Dialog';
 import { AlertTriangle, Loader2, Repeat, BookOpen } from 'lucide-react';
@@ -74,15 +75,19 @@ interface ReservationModalProps {
   defaultDate?: string;
   defaultStartTime?: string;
   defaultEndTime?: string;
+  defaultActividadId?: string;
 }
 
-export function ReservationModal({ open, onOpenChange, classroom, reservation, onSuccess, defaultDate, defaultStartTime, defaultEndTime }: ReservationModalProps) {
+export function ReservationModal({ open, onOpenChange, classroom, reservation, onSuccess, defaultDate, defaultStartTime, defaultEndTime, defaultActividadId }: ReservationModalProps) {
   const [conflict, setConflict] = useState<{ hasConflict: boolean } | null>(null);
   const [checkingConflict, setCheckingConflict] = useState(false);
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [selectedActividadId, setSelectedActividadId] = useState('');
+  const [selectedBuildingId, setSelectedBuildingId] = useState('');
+  const [selectedClassroomId, setSelectedClassroomId] = useState('');
   const isEditing = !!reservation;
-  const classroomId = classroom?.id || reservation?.classroomId || '';
+  const needsClassroomSelection = !classroom && !reservation;
+  const classroomId = classroom?.id || reservation?.classroomId || (needsClassroomSelection ? selectedClassroomId : '');
   const classroomName = classroom?.name || reservation?.classroomName || '';
 
   const { register, handleSubmit, formState: { errors }, watch, reset, setValue } = useForm<ReservationFormData>({
@@ -116,10 +121,12 @@ export function ReservationModal({ open, onOpenChange, classroom, reservation, o
         endDate: '',
       });
       setSelectedDays([]);
-      setSelectedActividadId(reservation ? (reservation as any).actividadId || '' : '');
+      setSelectedActividadId(reservation ? (reservation as any).actividadId || '' : defaultActividadId || '');
       setConflict(null);
+      setSelectedBuildingId('');
+      setSelectedClassroomId('');
     }
-  }, [open, reservation, defaultDate, defaultStartTime, defaultEndTime, reset]);
+  }, [open, reservation, defaultDate, defaultStartTime, defaultEndTime, defaultActividadId, reset]);
 
   const { data: holidaysResponse } = useQuery({
     queryKey: ['holidays'],
@@ -134,6 +141,22 @@ export function ReservationModal({ open, onOpenChange, classroom, reservation, o
     enabled: open,
   });
   const actividades = actividadesRes || [];
+
+  const { data: buildings } = useQuery({
+    queryKey: ['buildings'],
+    queryFn: () => api.get<{ id: string; name: string }[]>('/buildings'),
+    enabled: open && needsClassroomSelection,
+  });
+
+  const { data: classrooms } = useQuery({
+    queryKey: ['classrooms', selectedBuildingId],
+    queryFn: () => {
+      const params: Record<string, string> = {};
+      if (selectedBuildingId) params.buildingId = selectedBuildingId;
+      return api.get<{ id: string; name: string; floor: number; capacity: number }[]>('/classrooms', params);
+    },
+    enabled: open && needsClassroomSelection,
+  });
 
   const handleActividadChange = (id: string) => {
     setSelectedActividadId(id);
@@ -222,14 +245,37 @@ export function ReservationModal({ open, onOpenChange, classroom, reservation, o
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEditing ? 'Editar Reservación' : `Reservar ${classroomName}`}</DialogTitle>
+          <DialogTitle>{isEditing ? 'Editar Reservación' : needsClassroomSelection ? 'Nueva Reservación' : `Reservar ${classroomName}`}</DialogTitle>
           <DialogDescription>
-            {classroomName}{classroom ? ` - Piso ${classroom.floor} · Capacidad: ${classroom.capacity}` : ''}
+            {classroomName ? `${classroomName}${classroom ? ` - Piso ${classroom.floor} · Capacidad: ${classroom.capacity}` : ''}` : 'Selecciona un aula y completa los datos'}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogBody className="space-y-4">
+            {needsClassroomSelection && (
+              <>
+                <div className="w-full">
+                  <Select
+                    label="Edificio"
+                    placeholder="Seleccionar edificio"
+                    value={selectedBuildingId}
+                    onValueChange={(v) => { setSelectedBuildingId(v); setSelectedClassroomId(''); }}
+                    options={(buildings || []).map((b: any) => ({ value: b.id, label: b.name }))}
+                  />
+                </div>
+                <div className="w-full">
+                  <Select
+                    label="Aula"
+                    placeholder="Seleccionar aula"
+                    value={selectedClassroomId}
+                    onValueChange={(v) => setSelectedClassroomId(v)}
+                    options={(classrooms || []).map((c: any) => ({ value: c.id, label: `${c.name} (Piso ${c.floor})` }))}
+                  />
+                </div>
+              </>
+            )}
+
             <Input
               type="date"
               label="Fecha"
@@ -381,7 +427,7 @@ export function ReservationModal({ open, onOpenChange, classroom, reservation, o
               type="submit"
               variant="accent"
               loading={mutation.isPending}
-              disabled={(!isEditing && (conflict?.hasConflict || checkingConflict)) || (!isEditing && isRecurring && selectedDays.length === 0)}
+              disabled={(!isEditing && (conflict?.hasConflict || checkingConflict)) || (!isEditing && isRecurring && selectedDays.length === 0) || (needsClassroomSelection && !classroomId)}
             >
               {isEditing ? 'Guardar cambios' : conflict?.hasConflict ? 'Conflicto detectado' : isRecurring ? 'Crear reservaciones' : 'Reservar'}
             </Button>

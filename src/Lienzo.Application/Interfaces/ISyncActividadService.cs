@@ -19,6 +19,7 @@ public class ExternalActividadInfo
     public TimeOnly? HoraFin { get; init; }
     public int? EspacioId { get; init; }
     public string? AulaNombre { get; set; }
+    public string? DiasDictado { get; init; }
 }
 
 public interface ISyncActividadService

@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { QRCodeSVG } from 'qrcode.react';
-import { ArrowLeft, CheckCircle2, XCircle, RefreshCw, Users, Clock, MapPin, QrCode, Upload, Lock } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, XCircle, RefreshCw, Users, Clock, MapPin, QrCode, Upload, Lock, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 
 interface AsistenciaAlumnoResponse {
   id: string;
@@ -49,6 +49,42 @@ export default function AsistenciaDocente() {
     queryFn: () => api.get<{ url: string }>(`/asistencia/qr/${claseId}`),
     enabled: !!claseId,
   });
+
+  type SortMode = 'nombre-asc' | 'nombre-desc' | 'presentes' | 'ausentes';
+  const [sortMode, setSortMode] = useState<SortMode>('nombre-asc');
+
+  const sortedAlumnos = useMemo(() => {
+    if (!clase) return [];
+    const sorted = [...clase.alumnos];
+    switch (sortMode) {
+      case 'nombre-asc':
+        sorted.sort((a, b) => a.alumnoNombre.localeCompare(b.alumnoNombre));
+        break;
+      case 'nombre-desc':
+        sorted.sort((a, b) => b.alumnoNombre.localeCompare(a.alumnoNombre));
+        break;
+      case 'presentes':
+        sorted.sort((a, b) => (a.presente === b.presente ? 0 : a.presente ? -1 : 1));
+        break;
+      case 'ausentes':
+        sorted.sort((a, b) => (a.presente === b.presente ? 0 : a.presente ? 1 : -1));
+        break;
+    }
+    return sorted;
+  }, [clase, sortMode]);
+
+  const nextSort = () => {
+    const order: SortMode[] = ['nombre-asc', 'nombre-desc', 'presentes', 'ausentes'];
+    const idx = order.indexOf(sortMode);
+    setSortMode(order[(idx + 1) % order.length]);
+  };
+
+  const sortLabels: Record<SortMode, string> = {
+    'nombre-asc': 'A-Z',
+    'nombre-desc': 'Z-A',
+    'presentes': 'Presentes',
+    'ausentes': 'Ausentes',
+  };
 
   const toggleMutation = useMutation({
     mutationFn: (asistenciaId: string) =>
@@ -135,21 +171,27 @@ export default function AsistenciaDocente() {
           <div className="bg-white rounded-xl border border-primary-100 overflow-hidden">
             <div className="px-4 py-3 bg-primary-50/50 border-b border-primary-100 flex items-center justify-between">
               <h2 className="font-semibold text-primary-800">Alumnos ({totalCount})</h2>
-              {clase.estado === 'Abierta' && (
-                <Button
-                  variant="accent"
-                  size="sm"
-                  onClick={() => syncMutation.mutate()}
-                  disabled={syncMutation.isPending}
-                >
-                  <Upload className="h-4 w-4 mr-1" />
-                  Sincronizar con SGA
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={nextSort} title={`Orden: ${sortLabels[sortMode]}`}>
+                  <ArrowUpDown className="h-3.5 w-3.5 mr-1" />
+                  {sortLabels[sortMode]}
                 </Button>
-              )}
+                {clase.estado === 'Abierta' && (
+                  <Button
+                    variant="accent"
+                    size="sm"
+                    onClick={() => syncMutation.mutate()}
+                    disabled={syncMutation.isPending}
+                  >
+                    <Upload className="h-4 w-4 mr-1" />
+                    Sincronizar con SGA
+                  </Button>
+                )}
+              </div>
             </div>
 
             <div className="divide-y divide-primary-50">
-              {clase.alumnos.map((alumno) => (
+              {sortedAlumnos.map((alumno) => (
                 <div key={alumno.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-primary-50/30 transition-colors">
                   <span className="text-sm text-primary-700">{alumno.alumnoNombre}</span>
                   <div className="flex items-center gap-2">

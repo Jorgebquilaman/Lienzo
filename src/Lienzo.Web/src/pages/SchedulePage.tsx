@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  ChevronLeft, ChevronRight, Building2, Repeat, CalendarDays, User, Clock, MapPin, Tag, Calendar, Plus,
+  ChevronLeft, ChevronRight, Building2, Repeat, CalendarDays, User, Clock, MapPin, Tag, Calendar, Plus, BookOpen, ListOrdered, Search, Move,
 } from 'lucide-react';
 import { addDays, subDays, format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -15,7 +15,8 @@ import { Badge } from '@/components/ui/Badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody } from '@/components/ui/Dialog';
 import { getStatusLabel, getStatusColor } from '@/lib/utils';
 import { ReservationModal } from '@/components/classrooms/ReservationModal';
-import type { Building, Classroom, Reservation } from '@/types';
+import { useAuthStore } from '@/stores/authStore';
+import type { Building, Classroom, Reservation, UserRole } from '@/types';
 
 const DAY_LABELS: Record<string, string> = {
   Monday: 'Lun', Tuesday: 'Mar', Wednesday: 'Mié', Thursday: 'Jue',
@@ -56,7 +57,7 @@ function ExistingClaseButton({ reservationId }: { reservationId: string }) {
   const navigate = useNavigate();
   const { data: claseId } = useQuery({
     queryKey: ['clase-por-reserva', reservationId],
-    queryFn: () => api.get<Guid | null>(`/asistencia/por-reserva/${reservationId}`),
+    queryFn: () => api.get<string | null>(`/asistencia/por-reserva/${reservationId}`),
   });
 
   if (claseId) {
@@ -155,6 +156,73 @@ export default function SchedulePage() {
   const isUserHoliday = holidays.find((h) => h.date === dateStr);
 
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
+  const user = useAuthStore((s) => s.user);
+  const [movingReservation, setMovingReservation] = useState(false);
+  const [moveBuildingId, setMoveBuildingId] = useState('');
+  const [moveClassroomId, setMoveClassroomId] = useState('');
+  const [moveApplyFuture, setMoveApplyFuture] = useState(false);
+
+  const { data: moveBuildings } = useQuery({
+    queryKey: ['buildings'],
+    queryFn: () => api.get<Building[]>('/buildings'),
+    enabled: movingReservation,
+  });
+
+  const { data: moveClassrooms } = useQuery({
+    queryKey: ['classrooms', moveBuildingId],
+    queryFn: () => {
+      const params: Record<string, string> = {};
+      if (moveBuildingId) params.buildingId = moveBuildingId;
+      return api.get<Classroom[]>('/classrooms', params);
+    },
+    enabled: movingReservation && !!moveBuildingId,
+  });
+
+  const moveMutation = useMutation({
+    mutationFn: ({ reservationId, newClassroomId, applyToFuture }: { reservationId: string; newClassroomId: string; applyToFuture: boolean }) =>
+      api.patch(`/reservations/${reservationId}/move`, { newClassroomId, applyToFuture }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['schedule'] });
+      setMovingReservation(false);
+      setSelectedReservation(null);
+      setMoveClassroomId('');
+      setMoveBuildingId('');
+    },
+    onError: (err: any) => {
+      alert(err?.message || 'Error al mover la reserva');
+    },
+  });
+
+  interface Actividad { id: string; nombre: string; codigoMateria: string; periodoNombre?: string; carreraNombre?: string; aulaId?: string; aulaNombre?: string; diaSemana?: string; horaInicio?: string; horaFin?: string; docenteIds: string[]; docentesNombres?: string; }
+
+  const { data: actividades } = useQuery({
+    queryKey: ['actividades'],
+    queryFn: () => api.get<Actividad[]>('/actividades'),
+  });
+
+  const unassignedActividades = useMemo(() => {
+    if (!actividades) return [];
+    return actividades.filter((a) => a.diaSemana && !a.aulaId);
+  }, [actividades]);
+
+  const [showUnassigned, setShowUnassigned] = useState(false);
+  const [unassignedAct, setUnassignedAct] = useState<Actividad | null>(null);
+  const [unassignedSearch, setUnassignedSearch] = useState('');
+
+  const DAY_LABEL_MAP: Record<string, string> = { Monday: 'Lun', Tuesday: 'Mar', Wednesday: 'Mié', Thursday: 'Jue', Friday: 'Vie', Saturday: 'Sáb' };
+
+  function getNextDateForDay(day: string): string {
+    const dayMap: Record<string, number> = { Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6, Sunday: 0 };
+    const targetDay = dayMap[day] ?? 0;
+    const now = new Date();
+    const diff = (targetDay - now.getDay() + 7) % 7;
+    const d = new Date(now);
+    d.setDate(d.getDate() + (diff === 0 ? 7 : diff));
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${dd}`;
+  }
 
   const reservationsByClassroom = useMemo(() => {
     const map: Record<string, Reservation[]> = {};
@@ -264,8 +332,62 @@ export default function SchedulePage() {
             <input type="date" value={dateStr} onChange={e => setCurrentDate(new Date(e.target.value + 'T12:00:00'))}
               className="pl-8 pr-3 py-1.5 text-sm border border-primary-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-accent-300" />
           </div>
+          {unassignedActividades.length > 0 && (
+            <Button variant="outline" size="sm" onClick={() => setShowUnassigned(!showUnassigned)} className={`ml-2 ${showUnassigned ? 'bg-accent-50 border-accent-300 text-accent-700' : ''}`}>
+              <ListOrdered className="h-4 w-4 mr-1" />
+              No asignados ({unassignedActividades.length})
+            </Button>
+          )}
         </div>
       </div>
+
+      {showUnassigned && unassignedActividades.length > 0 && (
+        <Card>
+          <CardContent className="p-4">
+            <h3 className="text-sm font-semibold text-primary-700 mb-3 flex items-center gap-2">
+              <BookOpen className="h-4 w-4 text-accent-500" />
+              Actividades sin aula asignada
+            </h3>
+            <div className="relative mb-3">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-primary-400 pointer-events-none" />
+              <input
+                type="text"
+                value={unassignedSearch}
+                onChange={(e) => setUnassignedSearch(e.target.value)}
+                placeholder="Filtrar por nombre de actividad..."
+                className="w-full pl-8 pr-3 py-1.5 text-sm border border-primary-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-accent-300"
+              />
+            </div>
+            <div className="space-y-2">
+              {unassignedActividades.filter((a) => !unassignedSearch || a.nombre.toLowerCase().includes(unassignedSearch.toLowerCase())).map((act) => (
+                <div key={act.id} className="flex items-center justify-between p-2.5 rounded-lg border border-primary-100 hover:border-accent-200 transition-colors">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-primary-700 truncate">{act.nombre}</p>
+                    <p className="text-xs text-primary-400 mt-0.5">
+                      <span className="inline-flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {DAY_LABEL_MAP[act.diaSemana!] || act.diaSemana} {act.horaInicio}-{act.horaFin}
+                      </span>
+                      {act.docentesNombres && (
+                        <span className="inline-flex items-center gap-1 ml-3">
+                          <User className="h-3 w-3" />
+                          {act.docentesNombres}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <Button variant="accent" size="sm" className="ml-3 flex-shrink-0" onClick={() => {
+                    setUnassignedAct(act);
+                  }}>
+                    <MapPin className="h-3.5 w-3.5 mr-1" />
+                    Asignar aula
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardContent className="p-0">
@@ -412,7 +534,21 @@ export default function SchedulePage() {
         }}
       />
 
-      <Dialog open={!!selectedReservation} onOpenChange={(open) => { if (!open) setSelectedReservation(null); }}>
+      <ReservationModal
+        open={!!unassignedAct}
+        onOpenChange={(open) => { if (!open) setUnassignedAct(null); }}
+        defaultDate={unassignedAct ? getNextDateForDay(unassignedAct.diaSemana!) : undefined}
+        defaultStartTime={unassignedAct?.horaInicio}
+        defaultEndTime={unassignedAct?.horaFin}
+        defaultActividadId={unassignedAct?.id}
+        onSuccess={() => {
+          setUnassignedAct(null);
+          setShowUnassigned(false);
+          queryClient.invalidateQueries({ queryKey: ['schedule', dateStr, buildingId, classroomId] });
+        }}
+      />
+
+      <Dialog open={!!selectedReservation} onOpenChange={(open) => { if (!open) { setSelectedReservation(null); setMovingReservation(false); setMoveClassroomId(''); setMoveBuildingId(''); } }}>
         {selectedReservation && (
           <DialogContent className="max-w-md">
             <DialogHeader>
@@ -452,6 +588,50 @@ export default function SchedulePage() {
                   {selectedReservation.actividadCarrera && <p className="text-xs text-primary-500">Carrera: {selectedReservation.actividadCarrera}</p>}
                   {selectedReservation.actividadDocentes && <p className="text-xs text-primary-500">Docentes: {selectedReservation.actividadDocentes}</p>}
                   {selectedReservation.status === 'Approved' && <ExistingClaseButton reservationId={selectedReservation.id} />}
+                </div>
+              )}
+              {selectedReservation.status === 'Approved' && user?.role === 'Admin' && !movingReservation && (
+                <Button variant="outline" size="sm" className="w-full" onClick={() => setMovingReservation(true)}>
+                  <Move className="h-4 w-4 mr-1" /> Mover aula
+                </Button>
+              )}
+              {movingReservation && (
+                <div className="pt-2 border-t border-primary-100 space-y-3">
+                  <p className="text-xs text-primary-400 font-medium">Mover a otra aula</p>
+                  <Select
+                    label="Edificio"
+                    placeholder="Seleccionar edificio"
+                    value={moveBuildingId}
+                    onValueChange={(v) => { setMoveBuildingId(v); setMoveClassroomId(''); }}
+                    options={(moveBuildings || []).map((b) => ({ value: b.id, label: b.name }))}
+                  />
+                  <Select
+                    label="Aula"
+                    placeholder="Seleccionar aula"
+                    value={moveClassroomId}
+                    onValueChange={(v) => setMoveClassroomId(v)}
+                    options={(moveClassrooms || []).map((c) => ({ value: c.id, label: `${c.name} (Piso ${c.floor})` }))}
+                  />
+                  {selectedReservation.recurringGroupId && (
+                    <label className="flex items-center gap-2 text-sm text-primary-600 cursor-pointer">
+                      <input type="checkbox" checked={moveApplyFuture} onChange={(e) => setMoveApplyFuture(e.target.checked)}
+                        className="rounded border-primary-300 text-accent-600 focus:ring-accent-500" />
+                      Aplicar a todas las futuras
+                    </label>
+                  )}
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="sm" className="flex-1" onClick={() => { setMovingReservation(false); setMoveClassroomId(''); setMoveBuildingId(''); }}>
+                      Cancelar
+                    </Button>
+                    <Button variant="accent" size="sm" className="flex-1" disabled={!moveClassroomId || moveMutation.isPending}
+                      onClick={() => moveMutation.mutate({
+                        reservationId: selectedReservation.id,
+                        newClassroomId: moveClassroomId,
+                        applyToFuture: moveApplyFuture,
+                      })}>
+                      {moveMutation.isPending ? 'Moviendo...' : 'Confirmar'}
+                    </Button>
+                  </div>
                 </div>
               )}
               {selectedReservation.description && (

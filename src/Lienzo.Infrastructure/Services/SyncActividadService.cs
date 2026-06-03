@@ -64,7 +64,7 @@ public class SyncActividadService : ISyncActividadService
         var comisionIds = items.Select(i => i.Comision).ToList();
         if (comisionIds.Count > 0)
         {
-            var scheduleMap = new Dictionary<int, (string DiaSemana, TimeOnly HoraInicio, TimeOnly HoraFin, int? EspacioId)>();
+            var scheduleMap = new Dictionary<int, (string DiaSemana, TimeOnly HoraInicio, TimeOnly HoraFin, int? EspacioId, List<string> DiasList)>();
 
             await using var hCmd = new NpgsqlCommand(
                 @"SELECT bh.comision, a.dia_semana, a.hora_inicio, a.hora_finalizacion, a.espacio
@@ -89,10 +89,15 @@ public class SyncActividadService : ISyncActividadService
                 if (string.IsNullOrEmpty(dia) || hi is null || hf is null)
                     continue;
 
-                // Store only the first schedule entry per comision
                 if (!scheduleMap.ContainsKey(comisionId))
                 {
-                    scheduleMap[comisionId] = (dia, hi.Value, hf.Value, espacio);
+                    scheduleMap[comisionId] = (dia, hi.Value, hf.Value, espacio, [dia]);
+                }
+                else
+                {
+                    var existing = scheduleMap[comisionId];
+                    if (!existing.DiasList.Contains(dia))
+                        existing.DiasList.Add(dia);
                 }
             }
             await hr.CloseAsync();
@@ -145,6 +150,8 @@ public class SyncActividadService : ISyncActividadService
                         ? espacioMap.GetValueOrDefault(sched.EspacioId.Value)
                         : null;
 
+                    var diasDictado = string.Join(",", sched.DiasList);
+
                     updatedItems.Add(new ExternalActividadInfo
                     {
                         Comision = item.Comision,
@@ -162,6 +169,7 @@ public class SyncActividadService : ISyncActividadService
                         HoraFin = sched.HoraFin,
                         EspacioId = sched.EspacioId,
                         AulaNombre = aulaNombre,
+                        DiasDictado = diasDictado,
                     });
                 }
                 else
@@ -227,6 +235,7 @@ public class SyncActividadService : ISyncActividadService
                     HoraFin = item.HoraFin,
                     EspacioId = item.EspacioId,
                     AulaNombre = item.AulaNombre,
+                    DiasDictado = item.DiasDictado,
                 });
             }
             items = itemsWithDocentes;

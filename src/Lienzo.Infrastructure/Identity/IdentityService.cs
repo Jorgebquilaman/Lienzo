@@ -299,6 +299,17 @@ public class IdentityService : IAuthService
         return user?.SgaPersonaId;
     }
 
+    public async Task<List<(Guid UserId, string Email)>> GetUsersBySgaPersonaIdsAsync(List<int> personaIds)
+    {
+        if (personaIds.Count == 0) return [];
+
+        return await _userManager.Users
+            .Where(u => u.SgaPersonaId.HasValue && personaIds.Contains(u.SgaPersonaId.Value))
+            .Select(u => new { u.Id, u.Email })
+            .ToListAsync()
+            .ContinueWith(t => t.Result.Select(u => (u.Id, u.Email ?? "")).ToList());
+    }
+
     private async Task<Result<AuthResponse>> GenerateAuthResponseAsync(ApplicationUser user)
     {
         var roles = await _userManager.GetRolesAsync(user);

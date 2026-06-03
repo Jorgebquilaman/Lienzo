@@ -50,6 +50,10 @@ public class ActividadConfiguration : IEntityTypeConfiguration<Actividad>
         builder.Property(e => e.HoraFin)
             .HasColumnName("HoraFin");
 
+        builder.Property(e => e.DiasDictado)
+            .HasColumnName("DiasDictado")
+            .HasMaxLength(100);
+
         builder.Property(e => e.CreatedAt)
             .HasColumnName("CreatedAt")
             .IsRequired();
