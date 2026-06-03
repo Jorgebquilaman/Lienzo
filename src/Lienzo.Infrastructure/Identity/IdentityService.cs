@@ -352,6 +352,14 @@ public class IdentityService : IAuthService
                     continue;
                 }
 
+                // Ensure email is a valid format - if it lacks '@', append a fallback domain
+                if (!email.Contains('@'))
+                {
+                    email = $"{email}@alumno.lienzo.app";
+                    _logger.LogInformation("Constructed email {Email} for persona {PersonaId} from raw value '{Raw}'",
+                        email, alumno.PersonaId, alumno.Email);
+                }
+
                 var existing = await _userManager.FindByEmailAsync(email);
                 if (existing is not null)
                 {
