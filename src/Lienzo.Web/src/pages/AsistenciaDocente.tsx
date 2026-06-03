@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
@@ -102,6 +102,22 @@ export default function AsistenciaDocente() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['clase', claseId] }),
   });
 
+  const [usuariosCreados, setUsuariosCreados] = useState(0);
+  const [syncUsersDone, setSyncUsersDone] = useState(false);
+
+  useEffect(() => {
+    if (!claseId || syncUsersDone) return;
+    setSyncUsersDone(true);
+    api.post<number>(`/asistencia/${claseId}/sync-missing-users`, {})
+      .then((created) => {
+        if (created > 0) {
+          setUsuariosCreados(created);
+          queryClient.invalidateQueries({ queryKey: ['clase', claseId] });
+        }
+      })
+      .catch(() => {});
+  }, [claseId]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -131,6 +147,11 @@ export default function AsistenciaDocente() {
         <div>
           <h1 className="font-heading text-2xl font-bold text-primary-800">Tomar asistencia</h1>
           <p className="text-primary-500 text-sm">{clase.actividadNombre}</p>
+          {usuariosCreados > 0 && (
+            <p className="text-green-600 text-sm font-medium mt-1">
+              Se crearon {usuariosCreados} usuario{usuariosCreados !== 1 ? 's' : ''} nuevo{usuariosCreados !== 1 ? 's' : ''} para que los alumnos puedan acceder
+            </p>
+          )}
         </div>
       </div>
 

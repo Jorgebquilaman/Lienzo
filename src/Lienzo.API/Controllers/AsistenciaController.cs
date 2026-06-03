@@ -1,6 +1,7 @@
 using Lienzo.Application.Commands.CerrarClase;
 using Lienzo.Application.Commands.CheckIn;
 using Lienzo.Application.Commands.MarcarAsistencia;
+using Lienzo.Application.Commands.SyncMissingUsers;
 using Lienzo.Application.Commands.SyncSga;
 using Lienzo.Application.Commands.ToggleAsistencia;
 using Lienzo.Application.Interfaces;
@@ -90,6 +91,13 @@ public class AsistenciaController : BaseApiController
         [FromQuery] int pageSize = 20)
     {
         var result = await Mediator.Send(new GetClasesListQuery(desde, hasta, actividadId, page, pageSize));
+        return HandleResult(result);
+    }
+
+    [HttpPost("{claseId:guid}/sync-missing-users")]
+    public async Task<IActionResult> SyncMissingUsers(Guid claseId)
+    {
+        var result = await Mediator.Send(new SyncMissingUsersCommand(claseId));
         return HandleResult(result);
     }
 }
