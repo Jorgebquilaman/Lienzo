@@ -20,4 +20,5 @@ public interface IAuthService
     Task<Result<bool>> ResetPasswordAsync(ResetPasswordRequest request);
     Task<int?> GetSgaPersonaIdAsync(Guid userId);
     Task<List<(Guid UserId, string Email)>> GetUsersBySgaPersonaIdsAsync(List<int> personaIds);
+    Task EnsureStudentsExistAsync(List<SgaClaseAlumnoInfo> alumnos);
 }

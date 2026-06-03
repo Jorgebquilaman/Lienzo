@@ -10,6 +10,7 @@ using Lienzo.Application.Interfaces;
 using Lienzo.Infrastructure.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
@@ -21,17 +22,20 @@ public class IdentityService : IAuthService
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly RoleManager<IdentityRole<Guid>> _roleManager;
     private readonly JwtSettings _jwtSettings;
+    private readonly ILogger<IdentityService> _logger;
 
     public IdentityService(
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
         RoleManager<IdentityRole<Guid>> roleManager,
-        IOptions<JwtSettings> jwtSettings)
+        IOptions<JwtSettings> jwtSettings,
+        ILogger<IdentityService> logger)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _roleManager = roleManager;
         _jwtSettings = jwtSettings.Value;
+        _logger = logger;
     }
 
     public async Task<Result<AuthResponse>> LoginAsync(LoginRequest request)
@@ -308,6 +312,71 @@ public class IdentityService : IAuthService
             .Select(u => new { u.Id, u.Email })
             .ToListAsync()
             .ContinueWith(t => t.Result.Select(u => (u.Id, u.Email ?? "")).ToList());
+    }
+
+    public async Task EnsureStudentsExistAsync(List<SgaClaseAlumnoInfo> alumnos)
+    {
+        var personaIds = alumnos.Where(a => a.PersonaId > 0).Select(a => a.PersonaId).Distinct().ToList();
+        if (personaIds.Count == 0) return;
+
+        var existingPersonaIds = await _userManager.Users
+            .Where(u => u.SgaPersonaId.HasValue && personaIds.Contains(u.SgaPersonaId.Value))
+            .Select(u => u.SgaPersonaId!.Value)
+            .ToListAsync();
+
+        var missing = alumnos
+            .Where(a => a.PersonaId > 0 && !existingPersonaIds.Contains(a.PersonaId))
+            .DistinctBy(a => a.PersonaId)
+            .ToList();
+
+        foreach (var alumno in missing)
+        {
+            try
+            {
+                var email = alumno.Email.Trim().ToLowerInvariant();
+                if (string.IsNullOrWhiteSpace(email)) continue;
+
+                var existing = await _userManager.FindByEmailAsync(email);
+                if (existing is not null) continue;
+
+                var firstName = Capitalize(alumno.Nombres);
+                var lastName = Capitalize(alumno.Apellido);
+
+                var user = new ApplicationUser
+                {
+                    UserName = email,
+                    Email = email,
+                    FirstName = firstName,
+                    LastName = lastName,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    SgaPersonaId = alumno.PersonaId,
+                };
+
+                var createResult = await _userManager.CreateAsync(user, "Estudiante123!");
+                if (!createResult.Succeeded)
+                {
+                    _logger.LogWarning("Failed to create student user for {Email}: {Errors}",
+                        email, string.Join("; ", createResult.Errors.Select(e => e.Description)));
+                    continue;
+                }
+
+                await _userManager.AddToRoleAsync(user, "Student");
+                _logger.LogInformation("Created student user '{Name}' with email {Email} during check-in",
+                    $"{firstName} {lastName}", email);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating student user for persona {PersonaId}", alumno.PersonaId);
+            }
+        }
+    }
+
+    private static string Capitalize(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return s;
+        return string.Join(" ", s.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Select(p => char.ToUpper(p[0]) + p[1..].ToLower()));
     }
 
     private async Task<Result<AuthResponse>> GenerateAuthResponseAsync(ApplicationUser user)

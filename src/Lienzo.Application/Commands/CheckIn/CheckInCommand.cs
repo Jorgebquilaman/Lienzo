@@ -15,17 +15,20 @@ public class CheckInCommandHandler : IRequestHandler<CheckInCommand, Result<Chec
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
+    private readonly IAuthService _authService;
     private readonly ISgaAsistenciaService _sgaAsistencia;
     private readonly ILogger<CheckInCommandHandler> _logger;
 
     public CheckInCommandHandler(
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser,
+        IAuthService authService,
         ISgaAsistenciaService sgaAsistencia,
         ILogger<CheckInCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _authService = authService;
         _sgaAsistencia = sgaAsistencia;
         _logger = logger;
     }
@@ -66,6 +69,9 @@ public class CheckInCommandHandler : IRequestHandler<CheckInCommand, Result<Chec
 
         if (alumnosSga.Count == 0)
             return Result<CheckInResult>.Failure("No se encontraron alumnos inscriptos en SGA para esta clase.");
+
+        // Ensure all SGA students have an ApplicationUser account so they can log in
+        await _authService.EnsureStudentsExistAsync(alumnosSga);
 
         // Create Clase
         int? claseSgaClaseId = alumnosSga[0].SgaClaseId > 0 ? alumnosSga[0].SgaClaseId : null;

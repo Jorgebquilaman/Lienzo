@@ -10,6 +10,7 @@ public class SgaClaseAlumnoInfo
     public string Apellido { get; init; } = "";
     public string Nombres { get; init; } = "";
     public int SgaAsistenciaId { get; init; }
+    public string Email { get; init; } = "";
 }
 
 public class SyncSgaResult
