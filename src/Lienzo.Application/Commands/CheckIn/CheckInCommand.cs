@@ -70,6 +70,14 @@ public class CheckInCommandHandler : IRequestHandler<CheckInCommand, Result<Chec
         if (alumnosSga.Count == 0)
             return Result<CheckInResult>.Failure("No se encontraron alumnos inscriptos en SGA para esta clase.");
 
+        _logger.LogInformation("Found {Count} students from SGA for comision {Comision} on {Date}",
+            alumnosSga.Count, actividad.CodigoExterno.Value, reservation.Date);
+
+        // Log email stats for debugging
+        var totalEmail = alumnosSga.Count(a => !string.IsNullOrWhiteSpace(a.Email));
+        _logger.LogInformation("Students with email: {WithEmail}, without email: {WithoutEmail}",
+            totalEmail, alumnosSga.Count - totalEmail);
+
         // Ensure all SGA students have an ApplicationUser account so they can log in
         await _authService.EnsureStudentsExistAsync(alumnosSga);
 

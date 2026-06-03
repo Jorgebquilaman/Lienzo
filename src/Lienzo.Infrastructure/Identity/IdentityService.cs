@@ -317,27 +317,47 @@ public class IdentityService : IAuthService
     public async Task EnsureStudentsExistAsync(List<SgaClaseAlumnoInfo> alumnos)
     {
         var personaIds = alumnos.Where(a => a.PersonaId > 0).Select(a => a.PersonaId).Distinct().ToList();
-        if (personaIds.Count == 0) return;
+        if (personaIds.Count == 0)
+        {
+            _logger.LogWarning("EnsureStudentsExistAsync: no persona IDs found in alumnos list");
+            return;
+        }
+
+        _logger.LogInformation("EnsureStudentsExistAsync: checking {Total} students, {Distinct} distinct persona IDs",
+            alumnos.Count, personaIds.Count);
 
         var existingPersonaIds = await _userManager.Users
             .Where(u => u.SgaPersonaId.HasValue && personaIds.Contains(u.SgaPersonaId.Value))
             .Select(u => u.SgaPersonaId!.Value)
             .ToListAsync();
 
+        _logger.LogInformation("EnsureStudentsExistAsync: {Existing} users already exist out of {Total} persona IDs",
+            existingPersonaIds.Count, personaIds.Count);
+
         var missing = alumnos
             .Where(a => a.PersonaId > 0 && !existingPersonaIds.Contains(a.PersonaId))
             .DistinctBy(a => a.PersonaId)
             .ToList();
+
+        _logger.LogInformation("EnsureStudentsExistAsync: {Missing} students need new user accounts", missing.Count);
 
         foreach (var alumno in missing)
         {
             try
             {
                 var email = alumno.Email.Trim().ToLowerInvariant();
-                if (string.IsNullOrWhiteSpace(email)) continue;
+                if (string.IsNullOrWhiteSpace(email))
+                {
+                    _logger.LogWarning("Skipping persona {PersonaId}: email is empty", alumno.PersonaId);
+                    continue;
+                }
 
                 var existing = await _userManager.FindByEmailAsync(email);
-                if (existing is not null) continue;
+                if (existing is not null)
+                {
+                    _logger.LogInformation("Skipping persona {PersonaId}: email {Email} already exists", alumno.PersonaId, email);
+                    continue;
+                }
 
                 var firstName = Capitalize(alumno.Nombres);
                 var lastName = Capitalize(alumno.Apellido);
