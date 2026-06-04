@@ -42,6 +42,7 @@ export default function AsistenciaDocente() {
     queryKey: ['clase', claseId],
     queryFn: () => api.get<ClaseResponse>(`/asistencia/${claseId}`),
     enabled: !!claseId,
+    refetchInterval: 5000,
   });
 
   const { data: qrData } = useQuery<{ url: string }>({
@@ -169,15 +170,25 @@ export default function AsistenciaDocente() {
                   {clase.estado === 'Abierta' ? 'Clase abierta' : 'Cerrada'}
                 </Badge>
                 {clase.estado === 'Abierta' && (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => cerrarMutation.mutate()}
-                    disabled={cerrarMutation.isPending}
-                  >
-                    <Lock className="h-4 w-4 mr-1" />
-                    Cerrar clase
-                  </Button>
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => queryClient.invalidateQueries({ queryKey: ['clase', claseId] })}
+                    >
+                      <RefreshCw className="h-4 w-4 mr-1" />
+                      Actualizar
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => cerrarMutation.mutate()}
+                      disabled={cerrarMutation.isPending}
+                    >
+                      <Lock className="h-4 w-4 mr-1" />
+                      Cerrar clase
+                    </Button>
+                  </>
                 )}
                 {syncMutation.isPending && <span className="text-sm text-primary-400 animate-pulse">Sincronizando...</span>}
                 {syncMutation.isSuccess && (

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Pencil, Shield, ShieldOff, RefreshCw, Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Pencil, Shield, ShieldOff, RefreshCw, Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -52,8 +52,11 @@ export default function AdminUsers() {
   const [editing, setEditing] = useState<AdminUser | null>(null);
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('fullName');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [page, setPage] = useState(0);
+  const pageSize = 15;
   const queryClient = useQueryClient();
 
   const form = useForm<UserFormData>({
@@ -104,6 +107,7 @@ export default function AdminUsers() {
     let result = data.filter((u) =>
       `${u.firstName} ${u.lastName} ${u.email}`.toLowerCase().includes(q)
     );
+    if (roleFilter) result = result.filter((u) => u.role === roleFilter);
     result.sort((a, b) => {
       let cmp = 0;
       switch (sortKey) {
@@ -126,7 +130,10 @@ export default function AdminUsers() {
       return sortDir === 'asc' ? cmp : -cmp;
     });
     return result;
-  }, [data, search, sortKey, sortDir]);
+  }, [data, search, sortKey, sortDir, roleFilter]);
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paginated = filtered.slice(page * pageSize, (page + 1) * pageSize);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -135,6 +142,7 @@ export default function AdminUsers() {
       setSortKey(key);
       setSortDir('asc');
     }
+    setPage(0);
   };
 
   const SortIcon = ({ column }: { column: SortKey }) => {
@@ -191,15 +199,27 @@ export default function AdminUsers() {
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary-400" />
-            <input
-              type="text"
-              placeholder="Buscar por nombre o correo..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full h-10 pl-9 pr-3 rounded-lg border border-primary-200 bg-white text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-            />
+          <div className="flex flex-wrap gap-3">
+            <div className="relative max-w-sm flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary-400" />
+              <input
+                type="text"
+                placeholder="Buscar por nombre o correo..."
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+                className="w-full h-10 pl-9 pr-3 rounded-lg border border-primary-200 bg-white text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+              />
+            </div>
+            <select
+              value={roleFilter}
+              onChange={(e) => { setRoleFilter(e.target.value); setPage(0); }}
+              className="h-10 rounded-lg border border-primary-200 bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+            >
+              <option value="">Todos los roles</option>
+              <option value="Admin">Administrador</option>
+              <option value="Teacher">Profesor</option>
+              <option value="Student">Estudiante</option>
+            </select>
           </div>
           <div className="overflow-x-auto">
           <Table>
@@ -224,7 +244,7 @@ export default function AdminUsers() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((u) => (
+              {paginated.map((u) => (
                 <TableRow key={u.id}>
                   <TableCell className="font-medium">{u.firstName} {u.lastName}</TableCell>
                   <TableCell className="text-primary-500 text-sm">{u.email}</TableCell>
@@ -265,7 +285,31 @@ export default function AdminUsers() {
               ))}
             </TableBody>
           </Table>
-        </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-primary-500">
+              {filtered.length} resultado{filtered.length !== 1 ? 's' : ''}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                className="p-1.5 rounded-md text-primary-500 hover:bg-primary-50 disabled:opacity-30 disabled:pointer-events-none"
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="text-sm text-primary-600 tabular-nums">
+                {page + 1} / {pageCount}
+              </span>
+              <button
+                className="p-1.5 rounded-md text-primary-500 hover:bg-primary-50 disabled:opacity-30 disabled:pointer-events-none"
+                onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+                disabled={page >= pageCount - 1}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

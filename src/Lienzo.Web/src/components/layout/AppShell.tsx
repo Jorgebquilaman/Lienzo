@@ -28,6 +28,7 @@ import {
   Star,
   ClipboardCheck,
   Globe,
+  KeyRound,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
@@ -52,6 +53,7 @@ const adminNavItems = [
   { path: '/admin/reservations', label: 'Reservaciones', icon: CalendarCheck },
   { path: '/admin/classrooms', label: 'Aulas', icon: DoorOpen },
   { path: '/admin/buildings', label: 'Edificios', icon: Building2 },
+  { path: '/admin/bedelia', label: 'Bedelía', icon: KeyRound },
   { path: '/admin/reports', label: 'Reportes', icon: BarChart3 },
   { path: '/admin/settings', label: 'Configuración', icon: Globe },
   { path: '/admin/maintenance', label: 'Mantenimiento', icon: Wrench },

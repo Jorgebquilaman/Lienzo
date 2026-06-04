@@ -20,7 +20,9 @@ public class GetMaintenanceBlocksQueryHandler : IRequestHandler<GetMaintenanceBl
         var filtered = blocks.AsEnumerable();
 
         if (query.ActiveOnly.HasValue)
-            filtered = filtered.Where(b => b.IsActive == query.ActiveOnly.Value);
+            filtered = filtered.Where(b => b.IsActive == query.ActiveOnly.Value
+                && b.StartTime.ToUniversalTime() <= DateTime.UtcNow
+                && b.EndTime.ToUniversalTime() > DateTime.UtcNow);
         if (query.ClassroomId.HasValue)
             filtered = filtered.Where(b => b.ClassroomId == query.ClassroomId.Value);
 

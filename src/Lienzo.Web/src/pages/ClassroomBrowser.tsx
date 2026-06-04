@@ -22,7 +22,7 @@ interface CampusStatusClassroom {
 }
 
 const STATUS_STYLES: Record<string, { border: string; dot: string; label: string; text: string }> = {
-  available: { border: 'border-l-green-500', dot: 'bg-green-500', label: 'Disponible', text: 'text-green-700' },
+  available: { border: 'border-l-accent-500', dot: 'bg-accent-500', label: 'Disponible', text: 'text-accent-700' },
   occupied: { border: 'border-l-red-500', dot: 'bg-red-500', label: 'Ocupado', text: 'text-red-700' },
   maintenance: { border: 'border-l-yellow-500', dot: 'bg-yellow-500', label: 'Mantenimiento', text: 'text-yellow-700' },
   inactive: { border: 'border-l-gray-400', dot: 'bg-gray-400', label: 'Inactivo', text: 'text-gray-500' },

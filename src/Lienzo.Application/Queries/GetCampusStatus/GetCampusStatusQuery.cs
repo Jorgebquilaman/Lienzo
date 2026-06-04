@@ -41,7 +41,7 @@ public class GetCampusStatusQueryHandler : IRequestHandler<GetCampusStatusQuery,
 
         var allMaintenance = await _unitOfWork.MaintenanceBlocks.GetAllAsync();
         var activeMaintenance = allMaintenance
-            .Where(m => m.IsActive && m.StartTime.ToLocalTime() <= localNow && m.EndTime.ToLocalTime() > localNow)
+            .Where(m => m.IsActive && m.StartTime.ToUniversalTime() <= DateTime.UtcNow && m.EndTime.ToUniversalTime() > DateTime.UtcNow)
             .ToList();
 
         var userMap = new Dictionary<Guid, string>();

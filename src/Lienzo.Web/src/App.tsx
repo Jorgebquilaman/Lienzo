@@ -25,6 +25,7 @@ import AdminReports from '@/pages/AdminReports';
 import AdminMaintenance from '@/pages/AdminMaintenance';
 import AdminSurveys from '@/pages/AdminSurveys';
 import AdminSettings from '@/pages/AdminSettings';
+import AdminBedelia from '@/pages/AdminBedelia';
 import AnnouncementsPage from '@/pages/AnnouncementsPage';
 import MySurveys from '@/pages/MySurveys';
 import ProfilePage from '@/pages/ProfilePage';
@@ -237,6 +238,14 @@ export default function App() {
           element={
             <AppShell>
               <AdminSettings />
+            </AppShell>
+          }
+        />
+        <Route
+          path="/admin/bedelia"
+          element={
+            <AppShell>
+              <AdminBedelia />
             </AppShell>
           }
         />

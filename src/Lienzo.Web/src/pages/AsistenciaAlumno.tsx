@@ -13,6 +13,7 @@ interface ClaseInfo {
   horaInicio: string;
   horaFin: string;
   estado: string;
+  alumnoNombre?: string;
 }
 
 interface MarcarResult {
@@ -85,6 +86,9 @@ export default function AsistenciaAlumno() {
         <div className="bg-white rounded-xl shadow-sm border border-green-200 p-8 max-w-md text-center">
           <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
           <h2 className="font-heading text-2xl font-bold text-green-700 mb-2">¡Asistencia registrada!</h2>
+          {clase.alumnoNombre && (
+            <p className="font-semibold text-primary-800 text-sm mb-3">{clase.alumnoNombre}</p>
+          )}
           <p className="text-primary-500 mb-1">{clase.actividadNombre}</p>
           <p className="text-sm text-primary-400 flex items-center justify-center gap-1">
             <MapPin className="h-3.5 w-3.5" /> {clase.classroomName}
@@ -104,6 +108,9 @@ export default function AsistenciaAlumno() {
         <p className="text-primary-500 text-sm mb-6">¿Estás presente en esta clase?</p>
 
         <div className="bg-primary-50/50 rounded-lg p-4 mb-6 space-y-2 text-left">
+          {clase.alumnoNombre && (
+            <p className="font-semibold text-primary-800 text-sm text-center mb-2">{clase.alumnoNombre}</p>
+          )}
           <p className="font-semibold text-primary-800">{clase.actividadNombre}</p>
           <p className="text-sm text-primary-500 flex items-center gap-1.5">
             <MapPin className="h-4 w-4" /> {clase.classroomName}

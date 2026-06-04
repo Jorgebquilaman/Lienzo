@@ -12,6 +12,7 @@ public record ClaseResponse(
     TimeOnly HoraFin,
     string Estado,
     DateTime CheckedInAt,
+    string? AlumnoNombre,
     List<AsistenciaAlumnoResponse> Alumnos);
 
 public record AsistenciaAlumnoResponse(
