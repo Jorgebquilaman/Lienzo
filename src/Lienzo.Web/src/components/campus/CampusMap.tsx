@@ -113,7 +113,11 @@ export default function CampusMap() {
     );
   }
 
-  if (data.buildings.length === 0) {
+  const buildingsWithClassrooms = data.buildings.filter(
+    (b) => b.floors.some((f) => f.classrooms.length > 0)
+  );
+
+  if (buildingsWithClassrooms.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
         <Building2 className="h-12 w-12 text-primary-200 mb-3" />
@@ -152,7 +156,7 @@ export default function CampusMap() {
       </div>
 
       <div className="space-y-6">
-        {data.buildings.map((building) => (
+        {buildingsWithClassrooms.map((building) => (
           <div key={building.id} className="bg-white rounded-xl border border-primary-100 overflow-hidden">
             <div className="bg-primary-50 px-5 py-3 border-b border-primary-100">
               <div className="flex items-center gap-2">
@@ -174,7 +178,7 @@ export default function CampusMap() {
                       </span>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {floor.classrooms.map((cr) => {
+                      {[...floor.classrooms].sort((a, b) => a.name.localeCompare(b.name, 'es', { numeric: true })).map((cr) => {
                         const cfg = statusConfig[cr.status] || statusConfig.inactive;
                         return (
                           <button

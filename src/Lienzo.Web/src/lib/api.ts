@@ -29,6 +29,7 @@ class FetchClient {
       } catch {
         // ignore parse error
       }
+      console.error(`API ${response.method} ${response.url} → ${response.status}: ${errorMessage}`);
       if (response.status === 401) {
         useAuthStore.getState().logout();
       }
@@ -54,6 +55,7 @@ class FetchClient {
   }
 
   async post<T>(path: string, body?: unknown): Promise<T> {
+    console.log(`POST ${path}`, body);
     const response = await fetch(`${this.baseUrl}${path}`, {
       method: 'POST',
       headers: this.getHeaders(),

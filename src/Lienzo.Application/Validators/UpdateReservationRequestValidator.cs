@@ -11,7 +11,7 @@ public class UpdateReservationRequestValidator : AbstractValidator<UpdateReserva
         {
             RuleFor(x => x.Title)
                 .NotEmpty().WithMessage("Title cannot be empty")
-                .MaximumLength(200).WithMessage("Title must not exceed 200 characters");
+                .MaximumLength(500).WithMessage("Title must not exceed 500 characters");
         });
     }
 }

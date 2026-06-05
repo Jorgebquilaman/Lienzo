@@ -29,6 +29,7 @@ import {
   ClipboardCheck,
   Globe,
   KeyRound,
+  Package,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
@@ -59,6 +60,7 @@ const adminNavItems = [
   { path: '/admin/maintenance', label: 'Mantenimiento', icon: Wrench },
   { path: '/admin/surveys', label: 'Encuestas', icon: Star },
   { path: '/admin/holidays', label: 'Feriados', icon: CalendarX2 },
+  { path: '/admin/accessories', label: 'Accesorios', icon: Package },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {

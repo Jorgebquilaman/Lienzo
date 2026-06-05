@@ -5,5 +5,11 @@ public enum ClassroomType
     General,
     Dance,
     Drawing,
-    Music
+    Music,
+    Lecture,
+    Laboratory,
+    Workshop,
+    Seminar,
+    Auditorium,
+    Office
 }

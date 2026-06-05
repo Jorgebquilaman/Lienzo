@@ -1,8 +1,10 @@
 using Lienzo.Application.Common.Models;
 using Lienzo.Application.DTOs;
 using Lienzo.Application.Interfaces;
+using Lienzo.Domain.Entities;
 using Lienzo.Domain.Interfaces;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace Lienzo.Application.Queries.GetKeyDeliveryHistory;
 
@@ -21,15 +23,17 @@ public class GetKeyDeliveryHistoryQueryHandler : IRequestHandler<GetKeyDeliveryH
 
     public async Task<Result<KeyDeliveryListResponse>> Handle(GetKeyDeliveryHistoryQuery query, CancellationToken ct)
     {
-        var deliveries = (await _unitOfWork.KeyDeliveries.GetAllAsync())
-            .Where(d => d.ReturnedAt != null);
+        IQueryable<KeyDelivery> queryable = _unitOfWork.KeyDeliveries.Query()
+            .Where(d => d.ReturnedAt != null)
+            .Include(d => d.Accessories)
+            .ThenInclude(a => a.Accessory);
 
         if (query.ClassroomId.HasValue)
-            deliveries = deliveries.Where(d => d.ClassroomId == query.ClassroomId.Value);
+            queryable = queryable.Where(d => d.ClassroomId == query.ClassroomId.Value);
 
-        var ordered = deliveries
+        var ordered = await queryable
             .OrderByDescending(d => d.DeliveredAt)
-            .ToList();
+            .ToListAsync(ct);
 
         if (ordered.Count == 0)
             return Result<KeyDeliveryListResponse>.Success(new(new(), 0));
@@ -52,6 +56,10 @@ public class GetKeyDeliveryHistoryQueryHandler : IRequestHandler<GetKeyDeliveryH
         var items = ordered.Select(d =>
         {
             var cls = classrooms.GetValueOrDefault(d.ClassroomId);
+            var accessories = d.Accessories?
+                .Where(a => a.Accessory != null)
+                .Select(a => new AccessoryDto(a.Accessory.Id, a.Accessory.Name, a.Accessory.Description, a.Accessory.IsActive))
+                .ToList();
             return new KeyDeliveryDto(
                 d.Id, d.ClassroomId,
                 cls?.Name ?? "",
@@ -59,7 +67,8 @@ public class GetKeyDeliveryHistoryQueryHandler : IRequestHandler<GetKeyDeliveryH
                 d.DeliveredToUserId, d.DeliveredToName,
                 d.DeliveredById,
                 userNames.GetValueOrDefault(d.DeliveredById, "Desconocido"),
-                d.DeliveredAt, d.ReturnedAt, d.Notes);
+                d.DeliveredAt, d.ReturnedAt, d.Notes,
+                accessories?.Count > 0 ? accessories : null);
         }).ToList();
 
         return Result<KeyDeliveryListResponse>.Success(new(items, items.Count));

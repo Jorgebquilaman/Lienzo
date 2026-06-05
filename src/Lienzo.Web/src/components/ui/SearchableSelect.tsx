@@ -1,111 +1,104 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { cn } from '@/lib/utils';
-import { Search, X, ChevronDown } from 'lucide-react';
+import { Search, ChevronDown } from 'lucide-react';
+
+interface Option {
+  value: string;
+  label: string;
+}
 
 interface SearchableSelectProps {
   label?: string;
-  placeholder?: string;
+  options: Option[];
   value: string;
   onChange: (value: string) => void;
-  options: { value: string; label: string }[];
-  error?: string;
+  placeholder?: string;
+  required?: boolean;
+  disabled?: boolean;
 }
 
-export function SearchableSelect({ label, placeholder = 'Buscar...', value, onChange, options, error }: SearchableSelectProps) {
+export function SearchableSelect({
+  label, options, value, onChange, placeholder, required, disabled,
+}: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const selected = useMemo(() => options.find((o) => o.value === value), [options, value]);
+  const selectedLabel = options.find((o) => o.value === value)?.label || '';
 
   const filtered = useMemo(() => {
-    if (!search) return options;
     const q = search.toLowerCase();
     return options.filter((o) => o.label.toLowerCase().includes(q));
   }, [options, search]);
 
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    const handler = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpen(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  const handleSelect = (opt: Option) => {
+    onChange(opt.value);
+    setOpen(false);
+    setSearch('');
+  };
+
   return (
-    <div className="w-full" ref={containerRef}>
-      {label && (
-        <label className="block text-sm font-medium text-primary-700 mb-1.5">{label}</label>
-      )}
-      <div className="relative">
-        {selected && !open ? (
-          <div
-            onClick={() => { setOpen(true); setSearch(''); setTimeout(() => inputRef.current?.focus(), 0); }}
-            className="flex h-10 w-full cursor-pointer items-center rounded-lg border border-primary-200 bg-white px-3 py-2 pr-8 text-sm"
-          >
-            <span className="truncate">{selected.label}</span>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onChange(''); setSearch(''); }}
-              className="absolute right-8 top-1/2 -translate-y-1/2 text-primary-400 hover:text-primary-600"
-            >
-              <X className="h-4 w-4" />
-            </button>
-            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-primary-400 pointer-events-none" />
-          </div>
-        ) : (
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary-400" />
+    <div ref={containerRef} className="relative">
+      {label && <label className="block text-sm font-medium text-primary-700 mb-1">{label}</label>}
+      <div
+        className={`flex items-center h-10 w-full rounded-lg border bg-white px-3 text-sm cursor-pointer ${
+          open ? 'border-primary-500 ring-2 ring-primary-200' : 'border-primary-200'
+        } ${disabled ? 'opacity-50 pointer-events-none' : ''}`}
+        onClick={() => { if (!disabled) { setOpen(!open); setTimeout(() => inputRef.current?.focus(), 50); } }}
+      >
+        <span className={selectedLabel ? 'text-primary-800 flex-1' : 'text-primary-400 flex-1'}>
+          {selectedLabel || placeholder || 'Seleccionar...'}
+        </span>
+        <ChevronDown className={`h-4 w-4 text-primary-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </div>
+      {open && (
+        <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-white border border-primary-200 rounded-lg shadow-lg overflow-hidden">
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-primary-100">
+            <Search className="h-4 w-4 text-primary-400 flex-shrink-0" />
             <input
               ref={inputRef}
               type="text"
+              className="flex-1 text-sm outline-none bg-transparent text-primary-800 placeholder:text-primary-400"
+              placeholder="Buscar..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              onFocus={() => setOpen(true)}
-              placeholder={selected ? selected.label : placeholder}
-              className={cn(
-                'flex h-10 w-full rounded-lg border border-primary-200 bg-white pl-9 pr-8 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2',
-                error && 'border-red-500 focus-visible:ring-red-500'
-              )}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && filtered.length === 1) {
+                  e.preventDefault();
+                  handleSelect(filtered[0]);
+                }
+              }}
             />
-            {search && (
-              <button
-                type="button"
-                onClick={() => setSearch('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-primary-400 hover:text-primary-600"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
           </div>
-        )}
-
-        {open && (
-          <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-primary-200 bg-white shadow-lg">
+          <div className="max-h-48 overflow-y-auto">
             {filtered.length === 0 ? (
-              <p className="px-3 py-2 text-sm text-primary-500">Sin resultados</p>
+              <div className="px-3 py-6 text-center text-sm text-primary-400">Sin resultados</div>
             ) : (
               filtered.map((opt) => (
-                <button
+                <div
                   key={opt.value}
-                  type="button"
-                  onClick={() => { onChange(opt.value); setSearch(''); setOpen(false); }}
-                  className={cn(
-                    'w-full px-3 py-2 text-left text-sm hover:bg-primary-50 transition-colors',
-                    opt.value === value && 'bg-accent-50 text-accent-700 font-medium'
-                  )}
+                  className={`px-3 py-2 text-sm cursor-pointer hover:bg-primary-50 transition-colors ${
+                    opt.value === value ? 'bg-accent-50 text-accent-700 font-medium' : 'text-primary-700'
+                  }`}
+                  onClick={() => handleSelect(opt)}
                 >
                   {opt.label}
-                </button>
+                </div>
               ))
             )}
           </div>
-        )}
-      </div>
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+        </div>
+      )}
     </div>
   );
 }

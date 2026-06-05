@@ -82,7 +82,8 @@ public class ReservationRepository : GenericRepository<Reservation>, IReservatio
     {
         var query = DbSet
             .Include(r => r.Classroom)
-            .Where(r => !r.IsDeleted && r.Date >= fromDate && r.Date <= toDate);
+            .Where(r => !r.IsDeleted && r.Date >= fromDate && r.Date <= toDate
+                && r.Status != ReservationStatus.Rejected && r.Status != ReservationStatus.Cancelled);
 
         if (classroomId.HasValue)
             query = query.Where(r => r.ClassroomId == classroomId.Value);

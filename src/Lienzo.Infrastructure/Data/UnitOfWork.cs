@@ -29,6 +29,7 @@ public class UnitOfWork : IUnitOfWork
     public IRepository<AsistenciaAlumno> AsistenciasAlumnos { get; }
     public IRepository<SystemSetting> SystemSettings { get; }
     public IRepository<KeyDelivery> KeyDeliveries { get; }
+    public IRepository<Accessory> Accessories { get; }
 
     public UnitOfWork(
         LienzoDbContext context,
@@ -64,6 +65,7 @@ public class UnitOfWork : IUnitOfWork
         AsistenciasAlumnos = new GenericRepository<AsistenciaAlumno>(context);
         SystemSettings = new GenericRepository<SystemSetting>(context);
         KeyDeliveries = new GenericRepository<KeyDelivery>(context);
+        Accessories = new GenericRepository<Accessory>(context);
     }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

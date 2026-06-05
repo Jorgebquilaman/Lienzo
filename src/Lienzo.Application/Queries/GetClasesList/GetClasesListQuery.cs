@@ -1,4 +1,5 @@
 using Lienzo.Application.Common.Models;
+using Lienzo.Application.Interfaces;
 using Lienzo.Domain.Enums;
 using Lienzo.Domain.Interfaces;
 using MediatR;
@@ -10,6 +11,7 @@ public record GetClasesListQuery(
     DateOnly? Desde,
     DateOnly? Hasta,
     Guid? ActividadId,
+    string? Estado,
     int Page,
     int PageSize) : IRequest<Result<PaginatedResult<ClaseListItemDto>>>;
 
@@ -24,17 +26,19 @@ public class ClaseListItemDto
     public string Estado { get; init; } = "";
     public int TotalAlumnos { get; init; }
     public int Presentes { get; init; }
-    public string DocenteNombre { get; init; } = "";
+    public string DocenteNombre { get; set; } = "";
     public DateTime CreatedAt { get; init; }
 }
 
 public class GetClasesListQueryHandler : IRequestHandler<GetClasesListQuery, Result<PaginatedResult<ClaseListItemDto>>>
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IAuthService _authService;
 
-    public GetClasesListQueryHandler(IUnitOfWork unitOfWork)
+    public GetClasesListQueryHandler(IUnitOfWork unitOfWork, IAuthService authService)
     {
         _unitOfWork = unitOfWork;
+        _authService = authService;
     }
 
     public async Task<Result<PaginatedResult<ClaseListItemDto>>> Handle(GetClasesListQuery request, CancellationToken ct)
@@ -53,6 +57,14 @@ public class GetClasesListQueryHandler : IRequestHandler<GetClasesListQuery, Res
 
         if (request.ActividadId.HasValue)
             query = query.Where(c => c.ActividadId == request.ActividadId.Value);
+
+        if (!string.IsNullOrWhiteSpace(request.Estado) && Enum.TryParse<ClaseEstado>(request.Estado, ignoreCase: true, out var estado))
+            query = query.Where(c => c.Estado == estado);
+
+        var usersResult = await _authService.GetAllUsersAsync();
+        var userNames = usersResult.IsSuccess
+            ? usersResult.Value.ToDictionary(u => u.Id, u => $"{u.FirstName} {u.LastName}")
+            : new Dictionary<Guid, string>();
 
         var totalCount = await query.CountAsync(ct);
 
@@ -76,6 +88,12 @@ public class GetClasesListQueryHandler : IRequestHandler<GetClasesListQuery, Res
                 CreatedAt = c.CreatedAt
             })
             .ToListAsync(ct);
+
+        foreach (var item in items)
+        {
+            if (Guid.TryParse(item.DocenteNombre, out var userId) && userNames.TryGetValue(userId, out var name))
+                item.DocenteNombre = name;
+        }
 
         return Result<PaginatedResult<ClaseListItemDto>>.Success(
             PaginatedResult<ClaseListItemDto>.Success(items, totalCount, request.Page, request.PageSize));

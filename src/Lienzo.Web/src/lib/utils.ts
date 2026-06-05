@@ -63,6 +63,7 @@ export function getClassroomTypeLabel(type: string): string {
     Workshop: 'Taller',
     Seminar: 'Seminario',
     Auditorium: 'Auditorio',
+    Office: 'Oficina',
   };
   return map[type] ?? type;
 }

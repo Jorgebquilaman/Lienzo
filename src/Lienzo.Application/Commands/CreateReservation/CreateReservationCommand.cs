@@ -82,7 +82,7 @@ public class CreateReservationCommandHandler : IRequestHandler<CreateReservation
             command.Request.EndTime);
 
         if (hasConflict)
-            return Result<ReservationDto>.Failure("The classroom has a conflict during one or more of the requested time slots", "CONFLICT");
+            return Result<ReservationDto>.Failure("El aula tiene un conflicto en uno o más de los horarios solicitados", "CONFLICT");
 
         Guid? recurringGroupId = dates.Count > 1 ? Guid.NewGuid() : null;
         string? recurrenceRule = null;

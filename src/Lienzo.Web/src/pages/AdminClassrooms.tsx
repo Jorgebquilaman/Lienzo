@@ -179,6 +179,9 @@ export default function AdminClassrooms() {
       queryClient.invalidateQueries({ queryKey: ['classrooms'] });
       setDialogOpen(false);
     },
+    onError: (err) => {
+      console.error('Error al crear/editar aula:', err);
+    },
   });
 
   const deleteMutation = useMutation({
@@ -337,6 +340,7 @@ export default function AdminClassrooms() {
                 { value: 'Workshop', label: 'Taller' },
                 { value: 'Seminar', label: 'Seminario' },
                 { value: 'Auditorium', label: 'Auditorio' },
+                { value: 'Office', label: 'Oficina' },
               ]} />
               <Textarea label="Descripción" {...form.register('description')} />
               <Input label="Características (separadas por coma)" placeholder="proyector, wifi, aire acondicionado" {...form.register('features')} />

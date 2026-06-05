@@ -23,10 +23,12 @@ public class GetActiveKeyDeliveriesQueryHandler : IRequestHandler<GetActiveKeyDe
 
     public async Task<Result<KeyDeliveryListResponse>> Handle(GetActiveKeyDeliveriesQuery query, CancellationToken ct)
     {
-        var deliveries = (await _unitOfWork.KeyDeliveries.GetAllAsync())
+        var deliveries = await _unitOfWork.KeyDeliveries.Query()
             .Where(d => d.ReturnedAt == null)
+            .Include(d => d.Accessories)
+            .ThenInclude(a => a.Accessory)
             .OrderByDescending(d => d.DeliveredAt)
-            .ToList();
+            .ToListAsync(ct);
 
         if (deliveries.Count == 0)
             return Result<KeyDeliveryListResponse>.Success(new(new(), 0));
@@ -73,13 +75,19 @@ public class GetActiveKeyDeliveriesQueryHandler : IRequestHandler<GetActiveKeyDe
                     nextReservation.StartTime.ToString(), nextReservation.EndTime.ToString());
             }
 
+            var accessories = d.Accessories?
+                .Where(a => a.Accessory != null)
+                .Select(a => new AccessoryDto(a.Accessory.Id, a.Accessory.Name, a.Accessory.Description, a.Accessory.IsActive))
+                .ToList();
+
             return new KeyDeliveryActiveDto(
                 d.Id, d.ClassroomId,
                 cls?.Name ?? "",
                 cls is not null && buildings.TryGetValue(cls.BuildingId, out var bn) ? bn : null,
                 d.DeliveredToUserId, d.DeliveredToName,
                 d.DeliveredAt, d.Notes,
-                nextInfo);
+                nextInfo,
+                accessories?.Count > 0 ? accessories : null);
         }).ToList();
 
         return Result<KeyDeliveryListResponse>.Success(new(items.Cast<KeyDeliveryDto>().ToList(), items.Count));

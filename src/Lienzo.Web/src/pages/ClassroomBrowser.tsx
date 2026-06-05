@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Search, MapPin, Users, Filter, X, Map, Clock, AlertTriangle, Wifi } from 'lucide-react';
+import { Search, MapPin, Users, Filter, X, Map, Clock, AlertTriangle, Wifi, KeyRound } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -59,6 +59,12 @@ export default function ClassroomBrowser() {
     refetchInterval: 30_000,
   });
 
+  const { data: keyDeliveries } = useQuery({
+    queryKey: ['keydelivery-active'],
+    queryFn: () => api.get<{ items: { classroomId: string; deliveredToName: string }[] }>('/keydelivery/active'),
+    refetchInterval: 30_000,
+  });
+
   const statusMap = useMemo(() => {
     const map: Record<string, CampusStatusClassroom> = {};
     for (const b of campusStatus?.buildings || []) {
@@ -71,12 +77,21 @@ export default function ClassroomBrowser() {
     return map;
   }, [campusStatus]);
 
+  const keyMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const d of keyDeliveries?.items || []) {
+      map[d.classroomId] = d.deliveredToName;
+    }
+    return map;
+  }, [keyDeliveries]);
+
   const classroomTypes = [
     { value: 'Lecture', label: 'Aula' },
     { value: 'Laboratory', label: 'Laboratorio' },
     { value: 'Workshop', label: 'Taller' },
     { value: 'Seminar', label: 'Seminario' },
     { value: 'Auditorium', label: 'Auditorio' },
+    { value: 'Office', label: 'Oficina' },
   ];
 
   const filtersActive = buildingFilter || typeFilter || search;
@@ -267,6 +282,12 @@ export default function ClassroomBrowser() {
                               <MapPin className="h-3 w-3" />
                               {classroom.buildingName} · Piso {classroom.floor}
                             </p>
+                            {keyMap[classroom.id] && (
+                              <p className="text-xs flex items-center gap-1 mt-0.5 ml-5 text-accent-600">
+                                <KeyRound className="h-3 w-3" />
+                                Llave: {keyMap[classroom.id]}
+                              </p>
+                            )}
                           </div>
                         </div>
 

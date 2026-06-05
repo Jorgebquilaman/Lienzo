@@ -18,6 +18,7 @@ export enum ClassroomType {
   Workshop = 'Workshop',
   Seminar = 'Seminar',
   Auditorium = 'Auditorium',
+  Office = 'Office',
 }
 
 export enum AnnouncementType {

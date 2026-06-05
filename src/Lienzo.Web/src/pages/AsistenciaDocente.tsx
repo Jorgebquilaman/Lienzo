@@ -1,11 +1,13 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { QRCodeSVG } from 'qrcode.react';
-import { ArrowLeft, CheckCircle2, XCircle, RefreshCw, Users, Clock, MapPin, QrCode, Upload, Lock, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, XCircle, RefreshCw, Users, Clock, MapPin, QrCode, Upload, Lock, ArrowUpDown, FileDown } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface AsistenciaAlumnoResponse {
   id: string;
@@ -105,6 +107,34 @@ export default function AsistenciaDocente() {
 
   const [usuariosCreados, setUsuariosCreados] = useState(0);
   const [syncUsersDone, setSyncUsersDone] = useState(false);
+  const [fullscreenQr, setFullscreenQr] = useState(false);
+  const qrContainerRef = useRef<HTMLDivElement>(null);
+
+  const exportPdf = () => {
+    if (!clase) return;
+    const doc = new jsPDF();
+    const now = new Date();
+    doc.setFontSize(14);
+    doc.text(clase.actividadNombre, 14, 20);
+    doc.setFontSize(10);
+    const fechaParts = clase.fecha.split('-');
+    const fechaLocal = fechaParts.length === 3 ? `${fechaParts[2]}/${fechaParts[1]}/${fechaParts[0]}` : clase.fecha;
+    doc.text(`${clase.classroomName} · ${fechaLocal} · ${clase.horaInicio.slice(0, 5)} - ${clase.horaFin.slice(0, 5)}`, 14, 28);
+    doc.setFontSize(9);
+    doc.text(`Emitido: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`, 14, 34);
+    autoTable(doc, {
+      head: [['#', 'Alumno', 'Estado', 'SGA']],
+      body: clase.alumnos.map((a, i) => [
+        String(i + 1),
+        a.alumnoNombre,
+        a.presente ? 'Presente' : 'Ausente',
+        a.sincronizado ? 'Sí' : 'No',
+      ]),
+      startY: 40,
+      headStyles: { fillColor: [79, 70, 229] },
+    });
+    doc.save(`asistencia_${claseId}.pdf`);
+  };
 
   useEffect(() => {
     if (!claseId || syncUsersDone) return;
@@ -190,6 +220,10 @@ export default function AsistenciaDocente() {
                     </Button>
                   </>
                 )}
+                <Button variant="outline" size="sm" onClick={exportPdf}>
+                  <FileDown className="h-4 w-4 mr-1" />
+                  PDF
+                </Button>
                 {syncMutation.isPending && <span className="text-sm text-primary-400 animate-pulse">Sincronizando...</span>}
                 {syncMutation.isSuccess && (
                   <span className="text-sm text-green-600">
@@ -244,7 +278,7 @@ export default function AsistenciaDocente() {
                         )}
                       </Button>
                     ) : (
-                      <Badge variant={alumno.presente ? 'success' : 'secondary'}>
+                      <Badge variant={alumno.presente ? 'approved' : 'rejected'}>
                         {alumno.presente ? 'Presente' : 'Ausente'}
                       </Badge>
                     )}
@@ -256,17 +290,20 @@ export default function AsistenciaDocente() {
         </div>
 
         <div className="space-y-4">
-          <div className="bg-white rounded-xl border border-primary-100 p-4 text-center">
+          <div ref={qrContainerRef} className="bg-white rounded-xl border border-primary-100 p-4 text-center">
             <h3 className="font-semibold text-primary-800 mb-3 flex items-center justify-center gap-1.5">
               <QrCode className="h-4 w-4" /> Código QR
             </h3>
             {qrData?.url && (
-              <div className="flex justify-center mb-3">
+              <div
+                className="flex justify-center mb-3 cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => setFullscreenQr(true)}
+              >
                 <QRCodeSVG value={qrData.url} size={200} />
               </div>
             )}
             <p className="text-xs text-primary-400">
-              Escaneá el QR con tu celular para marcar asistencia
+              Tocá el QR para verlo en pantalla completa
             </p>
           </div>
 
@@ -289,6 +326,23 @@ export default function AsistenciaDocente() {
           </div>
         </div>
       </div>
+
+      {fullscreenQr && qrData?.url && (
+        <div
+          className="fixed inset-0 z-50 bg-black flex items-center justify-center"
+          onClick={() => setFullscreenQr(false)}
+        >
+          <div className="bg-white rounded-2xl p-8" onClick={(e) => e.stopPropagation()}>
+            <QRCodeSVG value={qrData.url} size={Math.min(window.innerWidth - 64, window.innerHeight - 64, 500)} />
+          </div>
+          <button
+            className="absolute top-4 right-4 text-white/60 hover:text-white text-3xl font-light"
+            onClick={() => setFullscreenQr(false)}
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </div>
   );
 }

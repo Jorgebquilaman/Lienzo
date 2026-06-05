@@ -5,6 +5,7 @@ using Lienzo.Domain.Entities;
 using Lienzo.Domain.Enums;
 using Lienzo.Domain.Interfaces;
 using MediatR;
+using Microsoft.Extensions.Logging;
 
 namespace Lienzo.Application.Commands.CreateClassroom;
 
@@ -14,15 +15,21 @@ public class CreateClassroomCommandHandler : IRequestHandler<CreateClassroomComm
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
+    private readonly ILogger<CreateClassroomCommandHandler> _logger;
 
-    public CreateClassroomCommandHandler(IUnitOfWork unitOfWork, IMapper mapper)
+    public CreateClassroomCommandHandler(IUnitOfWork unitOfWork, IMapper mapper, ILogger<CreateClassroomCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
+        _logger = logger;
     }
 
     public async Task<Result<ClassroomDto>> Handle(CreateClassroomCommand command, CancellationToken cancellationToken)
     {
+        var r = command.Request;
+        _logger.LogWarning("CreateClassroom request: Name={Name}, BuildingId={BuildingId}, Floor={Floor}, Capacity={Capacity}, Type={Type}, Features={Features}, ImageUrl={ImageUrl}",
+            r.Name, r.BuildingId, r.Floor, r.Capacity, r.Type, r.Features is not null ? string.Join(",", r.Features) : "null", r.ImageUrl);
+
         var building = await _unitOfWork.Buildings.GetByIdAsync(command.Request.BuildingId);
         if (building is null)
             return Result<ClassroomDto>.Failure("Building not found", "NOT_FOUND");
@@ -39,8 +46,7 @@ public class CreateClassroomCommandHandler : IRequestHandler<CreateClassroomComm
             command.Request.Features,
             command.Request.ImageUrl);
 
-        building.AddClassroom(classroom);
-        _unitOfWork.Buildings.Update(building);
+        await _unitOfWork.Classrooms.AddAsync(classroom);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         var dto = _mapper.Map<ClassroomDto>(classroom);

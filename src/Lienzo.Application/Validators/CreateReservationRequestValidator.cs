@@ -12,7 +12,7 @@ public class CreateReservationRequestValidator : AbstractValidator<CreateReserva
 
         RuleFor(x => x.Title)
             .NotEmpty().WithMessage("Title is required")
-            .MaximumLength(200).WithMessage("Title must not exceed 200 characters");
+            .MaximumLength(500).WithMessage("Title must not exceed 500 characters");
 
         RuleFor(x => x.Date)
             .NotEmpty().WithMessage("Date is required")

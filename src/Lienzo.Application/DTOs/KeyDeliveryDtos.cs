@@ -11,7 +11,8 @@ public record KeyDeliveryDto(
     string DeliveredByName,
     DateTime DeliveredAt,
     DateTime? ReturnedAt,
-    string? Notes);
+    string? Notes,
+    List<AccessoryDto>? Accessories = null);
 
 public record KeyDeliveryActiveDto(
     Guid Id,
@@ -22,7 +23,8 @@ public record KeyDeliveryActiveDto(
     string DeliveredToName,
     DateTime DeliveredAt,
     string? Notes,
-    NextReservationInfo? NextReservation) : KeyDeliveryDto(Id, ClassroomId, ClassroomName, BuildingName, DeliveredToUserId, DeliveredToName, Guid.Empty, "", DeliveredAt, null, Notes);
+    NextReservationInfo? NextReservation,
+    List<AccessoryDto>? Accessories = null) : KeyDeliveryDto(Id, ClassroomId, ClassroomName, BuildingName, DeliveredToUserId, DeliveredToName, Guid.Empty, "", DeliveredAt, null, Notes, Accessories);
 
 public record NextReservationInfo(
     Guid ReservationId,
@@ -35,7 +37,8 @@ public record DeliverKeyRequest(
     Guid ClassroomId,
     Guid? DeliveredToUserId,
     string DeliveredToName,
-    string? Notes);
+    string? Notes,
+    List<Guid>? AccessoryIds = null);
 
 public record KeyDeliveryListResponse(
     List<KeyDeliveryDto> Items,

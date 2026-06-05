@@ -22,7 +22,7 @@ public class ReservationConfiguration : IEntityTypeConfiguration<Reservation>
 
         builder.Property(e => e.Title)
             .HasColumnName("titulo")
-            .HasMaxLength(200)
+            .HasMaxLength(500)
             .IsRequired();
 
         builder.Property(e => e.Description)

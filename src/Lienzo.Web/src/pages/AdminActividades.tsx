@@ -5,6 +5,7 @@ import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { SearchableSelect } from '@/components/ui/SearchableSelect';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/Table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/Dialog';
 
@@ -52,6 +53,9 @@ export default function AdminActividades() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterPeriodoId, setFilterPeriodoId] = useState('');
   const [filterCarreraId, setFilterCarreraId] = useState('');
+  const [filterDocenteId, setFilterDocenteId] = useState('');
+  const [page, setPage] = useState(0);
+  const pageSize = 15;
   const [sortKey, setSortKey] = useState<string>('nombre');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -70,7 +74,8 @@ export default function AdminActividades() {
       (a.periodoNombre || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (a.carreraNombre || '').toLowerCase().includes(searchQuery.toLowerCase())) &&
       (!filterPeriodoId || a.periodoId === filterPeriodoId) &&
-      (!filterCarreraId || a.carreraId === filterCarreraId)
+      (!filterCarreraId || a.carreraId === filterCarreraId) &&
+      (!filterDocenteId || (a.docenteIds || []).includes(filterDocenteId))
     );
     return [...filtered].sort((a, b) => {
       let cmp = 0;
@@ -80,11 +85,15 @@ export default function AdminActividades() {
       else if (typeof av === 'number') cmp = av - bv;
       return sortDir === 'asc' ? cmp : -cmp;
     });
-  }, [actividades, searchQuery, filterPeriodoId, filterCarreraId, sortKey, sortDir]);
+  }, [actividades, searchQuery, filterPeriodoId, filterCarreraId, filterDocenteId, sortKey, sortDir]);
+
+  const pageCount = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const paginated = sorted.slice(page * pageSize, (page + 1) * pageSize);
 
   const toggleSort = (key: string) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     else { setSortKey(key); setSortDir('asc'); }
+    setPage(0);
   };
 
   const formatHorario = (a: Actividad) =>
@@ -255,20 +264,22 @@ export default function AdminActividades() {
           <div className="relative max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary-400" />
             <input type="text" placeholder="Buscar actividades..." value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              onChange={e => { setSearchQuery(e.target.value); setPage(0); }}
               className="w-full pl-9 pr-3 py-2 text-sm border border-primary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-300 focus:border-accent-400 bg-white" />
           </div>
           <div className="flex gap-2">
-            <select value={filterPeriodoId} onChange={e => setFilterPeriodoId(e.target.value)}
-              className="text-sm border border-primary-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-accent-300">
-              <option value="">Todos los periodos</option>
-              {periodos.map(p => <option key={p.id} value={p.id}>{p.nombre} {p.anio}</option>)}
-            </select>
-            <select value={filterCarreraId} onChange={e => setFilterCarreraId(e.target.value)}
-              className="text-sm border border-primary-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-accent-300">
-              <option value="">Todas las carreras</option>
-              {carreras.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-            </select>
+            <div className="w-56">
+              <SearchableSelect label="" placeholder="Todos los periodos" value={filterPeriodoId} onChange={v => { setFilterPeriodoId(v); setPage(0); }}
+                options={[{ value: '', label: 'Todos los periodos' }, ...periodos.map(p => ({ value: p.id, label: `${p.nombre} ${p.anio}` }))]} />
+            </div>
+            <div className="w-56">
+              <SearchableSelect label="" placeholder="Todas las carreras" value={filterCarreraId} onChange={v => { setFilterCarreraId(v); setPage(0); }}
+                options={[{ value: '', label: 'Todas las carreras' }, ...carreras.map(c => ({ value: c.id, label: c.nombre }))]} />
+            </div>
+            <div className="w-56">
+              <SearchableSelect label="" placeholder="Todos los docentes" value={filterDocenteId} onChange={v => { setFilterDocenteId(v); setPage(0); }}
+                options={[{ value: '', label: 'Todos los docentes' }, ...(users as User[]).map(u => ({ value: u.id, label: `${u.firstName} ${u.lastName}` }))]} />
+            </div>
           </div>
           <div className="overflow-x-auto">
           <Table>
@@ -287,7 +298,7 @@ export default function AdminActividades() {
             <TableBody>
               {sorted.length === 0 ? (
                 <TableRow><TableCell colSpan={8} className="text-center text-primary-400 py-8">Sin resultados</TableCell></TableRow>
-              ) : sorted.map(a => (
+              ) : paginated.map(a => (
                 <TableRow key={a.id}>
                   <TableCell className="font-medium">{a.nombre}</TableCell>
                   <TableCell className="text-primary-500 hidden">{a.codigoMateria}</TableCell>
@@ -320,7 +331,17 @@ export default function AdminActividades() {
               ))}
             </TableBody>
           </Table>
-        </div>
+          </div>
+          <div className="flex items-center justify-between pt-2">
+            <p className="text-sm text-primary-400">{sorted.length} actividad(es)</p>
+            <div className="flex items-center gap-2">
+              <button disabled={page === 0} onClick={() => setPage(p => Math.max(0, p - 1))}
+                className="px-3 py-1.5 text-sm border border-primary-200 rounded-lg disabled:opacity-30 hover:bg-primary-50 transition-colors">Anterior</button>
+              <span className="text-sm text-primary-500">{page + 1} / {pageCount}</span>
+              <button disabled={page >= pageCount - 1} onClick={() => setPage(p => p + 1)}
+                className="px-3 py-1.5 text-sm border border-primary-200 rounded-lg disabled:opacity-30 hover:bg-primary-50 transition-colors">Siguiente</button>
+            </div>
+          </div>
         </div>
       )}
 

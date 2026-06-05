@@ -43,6 +43,8 @@ public class LienzoDbContext : IdentityDbContext<ApplicationUser, IdentityRole<G
     public DbSet<AsistenciaAlumno> AsistenciasAlumnos => Set<AsistenciaAlumno>();
     public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
     public DbSet<KeyDelivery> KeyDeliveries => Set<KeyDelivery>();
+    public DbSet<Accessory> Accessories => Set<Accessory>();
+    public DbSet<KeyDeliveryAccessory> KeyDeliveryAccessories => Set<KeyDeliveryAccessory>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

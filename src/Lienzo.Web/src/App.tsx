@@ -26,12 +26,14 @@ import AdminMaintenance from '@/pages/AdminMaintenance';
 import AdminSurveys from '@/pages/AdminSurveys';
 import AdminSettings from '@/pages/AdminSettings';
 import AdminBedelia from '@/pages/AdminBedelia';
+import AdminAccesorios from '@/pages/AdminAccesorios';
 import AnnouncementsPage from '@/pages/AnnouncementsPage';
 import MySurveys from '@/pages/MySurveys';
 import ProfilePage from '@/pages/ProfilePage';
 import AsistenciaDocente from '@/pages/AsistenciaDocente';
 import AsistenciaAlumno from '@/pages/AsistenciaAlumno';
 import AsistenciasList from '@/pages/AsistenciasList';
+import TVDashboard from '@/pages/TVDashboard';
 
 export default function App() {
   const checkAuth = useAuthStore((s) => s.checkAuth);
@@ -50,6 +52,7 @@ export default function App() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/tv" element={<TVDashboard />} />
 
       <Route element={<ProtectedRoute />}>
         <Route
@@ -246,6 +249,14 @@ export default function App() {
           element={
             <AppShell>
               <AdminBedelia />
+            </AppShell>
+          }
+        />
+        <Route
+          path="/admin/accessories"
+          element={
+            <AppShell>
+              <AdminAccesorios />
             </AppShell>
           }
         />

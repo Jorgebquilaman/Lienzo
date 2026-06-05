@@ -39,7 +39,8 @@ public class GetAllActividadesQueryHandler : IRequestHandler<GetAllActividadesQu
         var dtos = items.Select(a =>
         {
             var docNames = string.Join(", ", a.Docentes
-                .Select(d => userNames.TryGetValue(d.DocenteId, out var name) ? name : d.DocenteId));
+                .Select(d => d.DocenteId).Distinct()
+                .Select(id => userNames.TryGetValue(id, out var name) ? name : id));
             return new ActividadDto(
                 a.Id, a.Nombre, a.CodigoMateria,
                 a.PeriodoId, a.Periodo?.Nombre,

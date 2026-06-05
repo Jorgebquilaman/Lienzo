@@ -87,10 +87,11 @@ public class AsistenciaController : BaseApiController
         [FromQuery] DateOnly? desde,
         [FromQuery] DateOnly? hasta,
         [FromQuery] Guid? actividadId,
+        [FromQuery] string? estado,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
-        var result = await Mediator.Send(new GetClasesListQuery(desde, hasta, actividadId, page, pageSize));
+        var result = await Mediator.Send(new GetClasesListQuery(desde, hasta, actividadId, estado, page, pageSize));
         return HandleResult(result);
     }
 

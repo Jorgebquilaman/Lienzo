@@ -4,6 +4,7 @@ using Lienzo.Application.Interfaces;
 using Lienzo.Domain.Entities;
 using Lienzo.Domain.Interfaces;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace Lienzo.Application.Commands.DeliverKey;
 
@@ -39,6 +40,20 @@ public class DeliverKeyCommandHandler : IRequestHandler<DeliverKeyCommand, Resul
             req.DeliveredToName, req.DeliveredToUserId, req.Notes);
 
         await _unitOfWork.KeyDeliveries.AddAsync(delivery);
+
+        if (req.AccessoryIds?.Count > 0)
+        {
+            var validIds = await _unitOfWork.Accessories.Query()
+                .Where(a => a.IsActive && req.AccessoryIds.Contains(a.Id))
+                .Select(a => a.Id)
+                .ToListAsync(ct);
+
+            foreach (var accessoryId in validIds)
+            {
+                delivery.Accessories.Add(new KeyDeliveryAccessory(delivery.Id, accessoryId));
+            }
+        }
+
         await _unitOfWork.SaveChangesAsync(ct);
 
         var building = (await _unitOfWork.Buildings.GetAllAsync())
@@ -52,12 +67,18 @@ public class DeliverKeyCommandHandler : IRequestHandler<DeliverKeyCommand, Resul
                 .FirstOrDefault() ?? ""
             : "";
 
+        var accessoryDtos = delivery.Accessories
+            .Where(a => a.Accessory != null)
+            .Select(a => new AccessoryDto(a.Accessory.Id, a.Accessory.Name, a.Accessory.Description, a.Accessory.IsActive))
+            .ToList();
+
         var dto = new KeyDeliveryDto(
             delivery.Id, delivery.ClassroomId,
             classroom.Name, building?.Name,
             delivery.DeliveredToUserId, delivery.DeliveredToName,
             delivery.DeliveredById, deliveredByName,
-            delivery.DeliveredAt, delivery.ReturnedAt, delivery.Notes);
+            delivery.DeliveredAt, delivery.ReturnedAt, delivery.Notes,
+            accessoryDtos.Count > 0 ? accessoryDtos : null);
 
         return Result<KeyDeliveryDto>.Success(dto);
     }

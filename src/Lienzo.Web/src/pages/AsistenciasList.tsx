@@ -7,7 +7,10 @@ import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { Card, CardContent } from '@/components/ui/Card';
 import { useAuthStore } from '@/stores/authStore';
-import { CalendarDays, Clock, MapPin, Users, BookOpen, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarDays, Clock, MapPin, Users, BookOpen, FileDown, FileSpreadsheet, ChevronLeft, ChevronRight } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 interface ClaseListItem {
   id: string;
@@ -33,8 +36,8 @@ interface PaginatedResponse<T> {
 
 function getStatusBadge(estado: string) {
   switch (estado) {
-    case 'Abierta': return <Badge>Abierta</Badge>;
-    case 'Cerrada': return <Badge variant="default">Cerrada</Badge>;
+    case 'Abierta': return <Badge variant="approved">Abierta</Badge>;
+    case 'Cerrada': return <Badge variant="cancelled">Cerrada</Badge>;
     default: return <Badge>{estado}</Badge>;
   }
 }
@@ -45,17 +48,68 @@ export default function AsistenciasList() {
   const [page, setPage] = useState(1);
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');
+  const [estado, setEstado] = useState('');
   const pageSize = 20;
 
   const { data, isLoading } = useQuery<PaginatedResponse<ClaseListItem>>({
-    queryKey: ['asistencias', page, desde, hasta],
+    queryKey: ['asistencias', page, desde, hasta, estado],
     queryFn: () => {
       const params: Record<string, string> = { page: String(page), pageSize: String(pageSize) };
       if (desde) params.desde = desde;
       if (hasta) params.hasta = hasta;
+      if (estado) params.estado = estado;
       return api.get<PaginatedResponse<ClaseListItem>>('/asistencia', params);
     },
   });
+
+  async function fetchAll() {
+    const params: Record<string, string> = { page: '1', pageSize: '100000' };
+    if (desde) params.desde = desde;
+    if (hasta) params.hasta = hasta;
+    if (estado) params.estado = estado;
+    const res = await api.get<PaginatedResponse<ClaseListItem>>('/asistencia', params);
+    return res.value;
+  }
+
+  async function exportExcel() {
+    const rows = await fetchAll();
+    if (!rows.length) return;
+    const ws = XLSX.utils.json_to_sheet(
+      rows.map((r) => ({
+        Actividad: r.actividadNombre,
+        Aula: r.classroomName,
+        Fecha: r.fecha,
+        'Hora Inicio': r.horaInicio,
+        'Hora Fin': r.horaFin,
+        Alumnos: `${r.presentes}/${r.totalAlumnos}`,
+        Estado: r.estado,
+        Docente: r.docenteNombre,
+      }))
+    );
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Asistencias');
+    XLSX.writeFile(wb, `asistencias_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }
+
+  async function exportPdf() {
+    const rows = await fetchAll();
+    if (!rows.length) return;
+    const doc = new jsPDF({ orientation: 'landscape' });
+    autoTable(doc, {
+      head: [['Actividad', 'Aula', 'Fecha', 'Inicio', 'Fin', 'Alumnos', 'Estado', 'Docente']],
+      body: rows.map((r) => [
+        r.actividadNombre,
+        r.classroomName,
+        r.fecha,
+        r.horaInicio,
+        r.horaFin,
+        `${r.presentes}/${r.totalAlumnos}`,
+        r.estado,
+        r.docenteNombre,
+      ]),
+    });
+    doc.save(`asistencias_${new Date().toISOString().slice(0, 10)}.pdf`);
+  }
 
   return (
     <div className="space-y-6">
@@ -72,11 +126,31 @@ export default function AsistenciasList() {
             <div className="w-40">
               <Input label="Hasta" type="date" value={hasta} onChange={(e) => { setHasta(e.target.value); setPage(1); }} />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-primary-700 mb-1">Estado</label>
+              <select
+                value={estado}
+                onChange={(e) => { setEstado(e.target.value); setPage(1); }}
+                className="h-10 rounded-lg border border-primary-200 bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+              >
+                <option value="">Todos</option>
+                <option value="Abierta">Abierta</option>
+                <option value="Cerrada">Cerrada</option>
+              </select>
+            </div>
             {(desde || hasta) && (
               <Button variant="ghost" size="sm" onClick={() => { setDesde(''); setHasta(''); setPage(1); }}>
                 Limpiar
               </Button>
             )}
+            <div className="flex gap-2 ml-auto">
+              <Button variant="outline" size="sm" onClick={exportPdf}>
+                <FileDown className="h-4 w-4 mr-1" /> PDF
+              </Button>
+              <Button variant="outline" size="sm" onClick={exportExcel}>
+                <FileSpreadsheet className="h-4 w-4 mr-1" /> Excel
+              </Button>
+            </div>
           </div>
 
           {isLoading ? (

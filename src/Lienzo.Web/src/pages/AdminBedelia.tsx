@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { KeyRound, Plus, ArrowLeftRight, Undo2, Search, Building2, User, Clock } from 'lucide-react';
+import { KeyRound, Plus, ArrowLeftRight, Undo2, Search, Building2, User, Clock, Map, Package } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -9,6 +9,8 @@ import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from '@/components/ui/Dialog';
 import { Badge } from '@/components/ui/Badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
+import { SearchableSelect } from '@/components/ui/SearchableSelect';
+import BedeliaMap from '@/components/bedelia/BedeliaMap';
 
 interface Classroom {
   id: string;
@@ -32,6 +34,13 @@ interface NextReservation {
   endTime: string;
 }
 
+interface Accessory {
+  id: string;
+  name: string;
+  description?: string;
+  isActive: boolean;
+}
+
 interface KeyDelivery {
   id: string;
   classroomId: string;
@@ -45,6 +54,7 @@ interface KeyDelivery {
   returnedAt?: string;
   notes?: string;
   nextReservation?: NextReservation;
+  accessories?: Accessory[];
 }
 
 interface KeyDeliveryListResponse {
@@ -53,7 +63,7 @@ interface KeyDeliveryListResponse {
 }
 
 export default function AdminBedelia() {
-  const [tab, setTab] = useState('active');
+  const [tab, setTab] = useState('map');
   const [deliverOpen, setDeliverOpen] = useState(false);
   const [returnConfirmId, setReturnConfirmId] = useState<string | null>(null);
   const [historySearch, setHistorySearch] = useState('');
@@ -61,6 +71,7 @@ export default function AdminBedelia() {
   const [formUserId, setFormUserId] = useState('');
   const [formOtherName, setFormOtherName] = useState('');
   const [formNotes, setFormNotes] = useState('');
+  const [formAccessoryIds, setFormAccessoryIds] = useState<string[]>([]);
   const queryClient = useQueryClient();
 
   const { data: classrooms } = useQuery({
@@ -71,6 +82,11 @@ export default function AdminBedelia() {
   const { data: users } = useQuery({
     queryKey: ['users'],
     queryFn: () => api.get<UserInfo[]>('/users'),
+  });
+
+  const { data: accessories } = useQuery({
+    queryKey: ['accessories'],
+    queryFn: () => api.get<Accessory[]>('/accessories'),
   });
 
   const { data: activeData, isLoading: activeLoading } = useQuery({
@@ -86,7 +102,7 @@ export default function AdminBedelia() {
   });
 
   const deliverMutation = useMutation({
-    mutationFn: (body: { classroomId: string; deliveredToUserId?: string; deliveredToName: string; notes?: string }) =>
+    mutationFn: (body: { classroomId: string; deliveredToUserId?: string; deliveredToName: string; notes?: string; accessoryIds?: string[] }) =>
       api.post('/keydelivery/deliver', body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['keydelivery-active'] });
@@ -115,19 +131,20 @@ export default function AdminBedelia() {
     setFormUserId('');
     setFormOtherName('');
     setFormNotes('');
+    setFormAccessoryIds([]);
   };
 
   const handleSubmitDeliver = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formClassroomId || !(formUserId || formOtherName.trim())) return;
-    const name = formUserId
-      ? (users?.find((u) => u.id === formUserId).firstName + ' ' + users?.find((u) => u.id === formUserId).lastName)
-      : formOtherName.trim();
+    const user = formUserId ? users?.find((u) => u.id === formUserId) : null;
+    const name = user ? `${user.firstName} ${user.lastName}`.trim() : formOtherName.trim();
     deliverMutation.mutate({
       classroomId: formClassroomId,
       deliveredToUserId: formUserId || undefined,
       deliveredToName: name,
       notes: formNotes || undefined,
+      accessoryIds: formAccessoryIds.length > 0 ? formAccessoryIds : undefined,
     });
   };
 
@@ -140,8 +157,12 @@ export default function AdminBedelia() {
     });
   };
 
-  const activeItems = activeData?.items || [];
-  const historyItems = historyData?.items || [];
+  const activeItems = (activeData?.items || []).sort((a, b) =>
+    a.classroomName.localeCompare(b.classroomName, 'es', { numeric: true })
+  );
+  const historyItems = (historyData?.items || []).sort((a, b) =>
+    a.classroomName.localeCompare(b.classroomName, 'es', { numeric: true })
+  );
 
   const filteredHistory = historySearch
     ? historyItems.filter(
@@ -158,13 +179,13 @@ export default function AdminBedelia() {
           <h1 className="font-heading text-2xl font-bold text-primary-800">Bedelía</h1>
           <p className="text-primary-500 mt-1">Control de entrega y devolución de llaves de aulas</p>
         </div>
-        <Button onClick={() => setDeliverOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" /> Entregar llave
-        </Button>
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
+          <TabsTrigger value="map">
+            <Map className="h-4 w-4 mr-1.5" /> Mapa
+          </TabsTrigger>
           <TabsTrigger value="active">
             <KeyRound className="h-4 w-4 mr-1.5" /> Activas ({activeItems.length})
           </TabsTrigger>
@@ -173,7 +194,16 @@ export default function AdminBedelia() {
           </TabsTrigger>
         </TabsList>
 
+        <TabsContent value="map">
+          <BedeliaMap />
+        </TabsContent>
+
         <TabsContent value="active">
+          <div className="flex justify-end mb-4">
+            <Button onClick={() => setDeliverOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" /> Entregar llave
+            </Button>
+          </div>
           {activeLoading ? (
             <div className="text-center py-16 text-primary-400">Cargando...</div>
           ) : activeItems.length === 0 ? (
@@ -184,29 +214,43 @@ export default function AdminBedelia() {
           ) : (
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader>
-                  <TableHead>Aula</TableHead>
-                  <TableHead>Edificio</TableHead>
-                  <TableHead>Entregado a</TableHead>
-                  <TableHead>Desde</TableHead>
-                  <TableHead className="hidden sm:table-cell">Próxima reserva</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableHeader>
-                <TableBody>
-                  {activeItems.map((d) => (
-                    <TableRow key={d.id}>
-                      <TableCell className="font-medium">{d.classroomName}</TableCell>
-                      <TableCell className="text-primary-400 text-sm">{d.buildingName || '—'}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1.5">
-                          <User className="h-3.5 w-3.5 text-primary-400" />
-                          <span>{d.deliveredToName}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-primary-500 text-sm">
-                        {new Date(d.deliveredAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">
+                  <TableHeader>
+                    <TableHead>Aula</TableHead>
+                    <TableHead>Edificio</TableHead>
+                    <TableHead>Entregado a</TableHead>
+                    <TableHead>Desde</TableHead>
+                    <TableHead className="hidden sm:table-cell">Accesorios</TableHead>
+                    <TableHead className="hidden sm:table-cell">Próxima reserva</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
+                  </TableHeader>
+                  <TableBody>
+                    {activeItems.map((d) => (
+                      <TableRow key={d.id}>
+                        <TableCell className="font-medium">{d.classroomName}</TableCell>
+                        <TableCell className="text-primary-400 text-sm">{d.buildingName || '—'}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1.5">
+                            <User className="h-3.5 w-3.5 text-primary-400" />
+                            <span>{d.deliveredToName}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-primary-500 text-sm">
+                          {new Date(d.deliveredAt).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          {d.accessories?.length ? (
+                            <div className="flex flex-wrap gap-1">
+                              {d.accessories.map((a) => (
+                                <span key={a.id} className="inline-flex items-center gap-0.5 text-xs bg-accent-50 text-accent-700 rounded-full px-2 py-0.5">
+                                  <Package className="h-3 w-3" />{a.name}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-primary-300 text-sm">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
                         {d.nextReservation ? (
                           <div className="flex items-center gap-1.5 text-sm">
                             <Clock className="h-3.5 w-3.5 text-accent-500" />
@@ -278,6 +322,7 @@ export default function AdminBedelia() {
                     <TableHead>Aula</TableHead>
                     <TableHead>Entregado a</TableHead>
                     <TableHead>Entregó</TableHead>
+                    <TableHead className="hidden sm:table-cell">Accesorios</TableHead>
                     <TableHead>Entrega</TableHead>
                     <TableHead>Devolución</TableHead>
                   </TableHeader>
@@ -287,6 +332,19 @@ export default function AdminBedelia() {
                         <TableCell className="font-medium">{d.classroomName}</TableCell>
                         <TableCell>{d.deliveredToName}</TableCell>
                         <TableCell className="text-primary-500 text-sm">{d.deliveredByName || '—'}</TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          {d.accessories?.length ? (
+                            <div className="flex flex-wrap gap-1">
+                              {d.accessories.map((a) => (
+                                <span key={a.id} className="inline-flex items-center gap-0.5 text-xs bg-accent-50 text-accent-700 rounded-full px-2 py-0.5">
+                                  <Package className="h-3 w-3" />{a.name}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-primary-300 text-sm">—</span>
+                          )}
+                        </TableCell>
                         <TableCell className="text-primary-400 text-sm">
                           {new Date(d.deliveredAt).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                         </TableCell>
@@ -314,35 +372,32 @@ export default function AdminBedelia() {
           </DialogHeader>
           <form onSubmit={handleSubmitDeliver}>
             <DialogBody className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-primary-700 mb-1">Aula</label>
-                <select
-                  className="w-full h-10 px-3 rounded-lg border border-primary-200 bg-white text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-                  value={formClassroomId}
-                  onChange={(e) => setFormClassroomId(e.target.value)}
-                  required
-                >
-                  <option value="">Seleccionar aula...</option>
-                  {(classrooms || []).map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}{c.buildingName ? ` (${c.buildingName})` : ''}</option>
-                  ))}
-                </select>
-              </div>
+              <SearchableSelect
+                label="Aula"
+                placeholder="Buscar aula..."
+                value={formClassroomId}
+                onChange={(v) => setFormClassroomId(v)}
+                options={(classrooms || []).map((c) => ({
+                  value: c.id,
+                  label: `${c.name}${c.buildingName ? ` (${c.buildingName})` : ''}`,
+                }))}
+                required
+              />
               <div>
                 <label className="block text-sm font-medium text-primary-700 mb-1">Entregar a</label>
-                <select
-                  className="w-full h-10 px-3 rounded-lg border border-primary-200 bg-white text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 mb-2"
+                <SearchableSelect
+                  label=""
+                  placeholder="Buscar usuario..."
                   value={formUserId}
-                  onChange={(e) => { setFormUserId(e.target.value); if (e.target.value) setFormOtherName(''); }}
-                >
-                  <option value="">Seleccionar usuario...</option>
-                  {(users || [])
+                  onChange={(v) => { setFormUserId(v); if (v) setFormOtherName(''); }}
+                  options={(users || [])
                     .filter((u) => u.role !== 'Student')
-                    .map((u) => (
-                      <option key={u.id} value={u.id}>{u.firstName} {u.lastName} ({u.role})</option>
-                    ))}
-                </select>
-                <p className="text-xs text-primary-400 text-center mb-1">— o —</p>
+                    .map((u) => ({
+                      value: u.id,
+                      label: `${u.firstName} ${u.lastName} (${u.role === 'Admin' ? 'Admin' : u.role === 'Teacher' ? 'Profesor' : u.role})`,
+                    }))}
+                />
+                <p className="text-xs text-primary-400 text-center my-2">— o —</p>
                 <Input
                   placeholder="Nombre de otra persona"
                   value={formOtherName}
@@ -351,6 +406,24 @@ export default function AdminBedelia() {
                 />
               </div>
               <Textarea label="Notas (opcional)" placeholder="Ej: Llave N° 3" value={formNotes} onChange={(e) => setFormNotes(e.target.value)} />
+              {(accessories?.length ?? 0) > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-primary-700 mb-1">Accesorios</label>
+                  <div className="space-y-1.5 max-h-40 overflow-y-auto border border-primary-200 rounded-lg p-2">
+                    {accessories!.map((a) => (
+                      <label key={a.id} className="flex items-center gap-2 px-2 py-1 rounded hover:bg-primary-50 cursor-pointer">
+                        <input type="checkbox" checked={formAccessoryIds.includes(a.id)}
+                          onChange={(e) => {
+                            setFormAccessoryIds(e.target.checked ? [...formAccessoryIds, a.id] : formAccessoryIds.filter((id) => id !== a.id));
+                          }}
+                          className="rounded border-primary-300 text-accent-600 focus:ring-accent-500" />
+                        <span className="text-sm text-primary-700">{a.name}</span>
+                        {a.description && <span className="text-xs text-primary-400">({a.description})</span>}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
             </DialogBody>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => { setDeliverOpen(false); resetForm(); }}>Cancelar</Button>

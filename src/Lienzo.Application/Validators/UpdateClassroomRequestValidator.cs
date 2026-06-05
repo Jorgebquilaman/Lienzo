@@ -31,8 +31,8 @@ public class UpdateClassroomRequestValidator : AbstractValidator<UpdateClassroom
         {
             RuleFor(x => x.Type)
                 .NotEmpty().WithMessage("Classroom type cannot be empty")
-                .Must(t => t is "General" or "Dance" or "Drawing" or "Music")
-                .WithMessage("Type must be General, Dance, Drawing, or Music");
+                .Must(t => t is "General" or "Dance" or "Drawing" or "Music" or "Lecture" or "Laboratory" or "Workshop" or "Seminar" or "Auditorium" or "Office")
+                .WithMessage("Type must be a valid classroom type");
         });
     }
 }

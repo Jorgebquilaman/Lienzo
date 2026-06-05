@@ -12,6 +12,7 @@ public class KeyDelivery : BaseEntity
     public DateTime DeliveredAt { get; private set; }
     public DateTime? ReturnedAt { get; private set; }
     public string? Notes { get; private set; }
+    public ICollection<KeyDeliveryAccessory> Accessories { get; private set; } = new List<KeyDeliveryAccessory>();
 
     private KeyDelivery() { }
 

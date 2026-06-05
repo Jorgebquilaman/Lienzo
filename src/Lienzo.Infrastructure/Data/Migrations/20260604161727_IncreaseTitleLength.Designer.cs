@@ -4,17 +4,20 @@ using System.Collections.Generic;
 using Lienzo.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Lienzo.Infrastructure.Migrations
+namespace Lienzo.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(LienzoDbContext))]
-    partial class LienzoDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260604161727_IncreaseTitleLength")]
+    partial class IncreaseTitleLength
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -22,48 +25,6 @@ namespace Lienzo.Infrastructure.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("Lienzo.Domain.Entities.Accessory", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("creado_en");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("eliminado_en");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("descripcion");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean")
-                        .HasColumnName("activo");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean")
-                        .HasColumnName("eliminado");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("nombre");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("actualizado_en");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("accesorios_bedelia", (string)null);
-                });
 
             modelBuilder.Entity("Lienzo.Domain.Entities.Actividad", b =>
                 {
@@ -716,23 +677,6 @@ namespace Lienzo.Infrastructure.Migrations
                         .HasDatabaseName("ix_entregas_llaves_devuelto");
 
                     b.ToTable("entregas_llaves", (string)null);
-                });
-
-            modelBuilder.Entity("Lienzo.Domain.Entities.KeyDeliveryAccessory", b =>
-                {
-                    b.Property<Guid>("KeyDeliveryId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("entrega_llave_id");
-
-                    b.Property<Guid>("AccessoryId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("accesorio_id");
-
-                    b.HasKey("KeyDeliveryId", "AccessoryId");
-
-                    b.HasIndex("AccessoryId");
-
-                    b.ToTable("entrega_accesorios", (string)null);
                 });
 
             modelBuilder.Entity("Lienzo.Domain.Entities.MaintenanceBlock", b =>
@@ -1487,25 +1431,6 @@ namespace Lienzo.Infrastructure.Migrations
                     b.Navigation("Classroom");
                 });
 
-            modelBuilder.Entity("Lienzo.Domain.Entities.KeyDeliveryAccessory", b =>
-                {
-                    b.HasOne("Lienzo.Domain.Entities.Accessory", "Accessory")
-                        .WithMany()
-                        .HasForeignKey("AccessoryId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Lienzo.Domain.Entities.KeyDelivery", "KeyDelivery")
-                        .WithMany("Accessories")
-                        .HasForeignKey("KeyDeliveryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Accessory");
-
-                    b.Navigation("KeyDelivery");
-                });
-
             modelBuilder.Entity("Lienzo.Domain.Entities.MaintenanceBlock", b =>
                 {
                     b.HasOne("Lienzo.Domain.Entities.Classroom", "Classroom")
@@ -1612,11 +1537,6 @@ namespace Lienzo.Infrastructure.Migrations
             modelBuilder.Entity("Lienzo.Domain.Entities.Classroom", b =>
                 {
                     b.Navigation("Reservations");
-                });
-
-            modelBuilder.Entity("Lienzo.Domain.Entities.KeyDelivery", b =>
-                {
-                    b.Navigation("Accessories");
                 });
 #pragma warning restore 612, 618
         }

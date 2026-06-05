@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  ChevronLeft, ChevronRight, Building2, Repeat, CalendarDays, User, Clock, MapPin, Tag, Calendar, Plus, BookOpen, ListOrdered, Search, Move,
+  ChevronLeft, ChevronRight, Building2, Repeat, CalendarDays, User, Clock, MapPin, Tag, Calendar, Plus, BookOpen, ListOrdered, Search, Move, ClipboardCheck,
 } from 'lucide-react';
 import { addDays, subDays, format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -92,7 +92,8 @@ function CheckInButton({ reservationId }: { reservationId: string }) {
       onClick={() => checkinMutation.mutate(reservationId)}
       disabled={checkinMutation.isPending}
     >
-      {checkinMutation.isPending ? 'Iniciando...' : 'Tomar Asistencia'}
+      <ClipboardCheck className="h-4 w-4 mr-1.5" />
+      {checkinMutation.isPending ? 'Iniciando...' : 'Habilitar Asistencia'}
     </Button>
   );
 }
@@ -135,8 +136,9 @@ export default function SchedulePage() {
 
   const filteredClassrooms = useMemo(() => {
     if (!classrooms) return [];
-    if (classroomId) return classrooms.filter((c) => c.id === classroomId);
-    return classrooms;
+    let list = classrooms;
+    if (classroomId) list = list.filter((c) => c.id === classroomId);
+    return [...list].sort((a, b) => a.name.localeCompare(b.name, 'es', { numeric: true }));
   }, [classrooms, classroomId]);
 
   const { data: reservations, isLoading } = useQuery({
@@ -146,6 +148,7 @@ export default function SchedulePage() {
         `/reservations/schedule?fromDate=${dateStr}&toDate=${dateStr}${buildingId ? `&buildingId=${buildingId}` : ''}${classroomId ? `&classroomId=${classroomId}` : ''}`
       ),
     enabled: !!buildingId,
+    refetchInterval: 15_000,
   });
 
   const { data: holidaysResponse } = useQuery({

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Search, CheckCircle, XCircle, Filter, Plus, Repeat, ArrowUpDown, ArrowUp, ArrowDown, CalendarX2, FileDown } from 'lucide-react';
+import { Search, CheckCircle, XCircle, Filter, Plus, Repeat, ArrowUpDown, ArrowUp, ArrowDown, CalendarX2, FileDown, CheckCheck, X } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -9,6 +9,7 @@ import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/Table';
 import { TableSkeleton } from '@/components/ui/Skeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/Dialog';
 import { getStatusLabel, getStatusColor, formatDateTime } from '@/lib/utils';
 import type { Reservation, PaginatedResponse } from '@/types';
 
@@ -81,6 +82,7 @@ export default function AdminReservations() {
   });
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [confirmAllAction, setConfirmAllAction] = useState<'approve' | 'reject' | null>(null);
 
   const bulkApprove = async () => {
     for (const id of selectedIds) {
@@ -94,6 +96,22 @@ export default function AdminReservations() {
       await rejectMutation.mutateAsync(id);
     }
     setSelectedIds([]);
+  };
+
+  const pendingItems = sortedData.filter((r) => r.status === 'Pending');
+
+  const bulkApproveAll = async () => {
+    for (const r of pendingItems) {
+      await approveMutation.mutateAsync(r.id);
+    }
+    setConfirmAllAction(null);
+  };
+
+  const bulkRejectAll = async () => {
+    for (const r of pendingItems) {
+      await rejectMutation.mutateAsync(r.id);
+    }
+    setConfirmAllAction(null);
   };
 
   const toggleSelect = (id: string) => {
@@ -200,7 +218,36 @@ export default function AdminReservations() {
         />
       </div>
 
-      {selectedIds.length > 0 && (
+      {pendingItems.length > 0 && (
+        <div className="flex items-center gap-2 p-3 bg-accent-50 rounded-lg">
+          <span className="text-sm text-accent-800 font-medium">
+            {pendingItems.length} pendiente(s)
+          </span>
+          <Button size="sm" variant="default" onClick={() => setConfirmAllAction('approve')}>
+            <CheckCheck className="h-4 w-4 mr-1" />
+            Aprobar todos
+          </Button>
+          <Button size="sm" variant="destructive" onClick={() => setConfirmAllAction('reject')}>
+            <X className="h-4 w-4 mr-1" />
+            Rechazar todos
+          </Button>
+          {selectedIds.length > 0 && (
+            <>
+              <span className="text-xs text-primary-400 mx-1">|</span>
+              <span className="text-xs text-accent-700">{selectedIds.length} seleccionada(s)</span>
+              <Button size="sm" variant="outline" onClick={bulkApprove}>
+                <CheckCircle className="h-4 w-4 mr-1" />
+                Aprobar
+              </Button>
+              <Button size="sm" variant="outline" onClick={bulkReject}>
+                <XCircle className="h-4 w-4 mr-1" />
+                Rechazar
+              </Button>
+            </>
+          )}
+        </div>
+      )}
+      {pendingItems.length === 0 && selectedIds.length > 0 && (
         <div className="flex items-center gap-2 p-3 bg-accent-50 rounded-lg">
           <span className="text-sm text-accent-800 font-medium">
             {selectedIds.length} seleccionada(s)
@@ -382,6 +429,31 @@ export default function AdminReservations() {
           </div>
         </div>
       )}
+
+      <Dialog open={confirmAllAction !== null} onOpenChange={(o) => { if (!o) setConfirmAllAction(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {confirmAllAction === 'approve' ? 'Aprobar todas las reservas' : 'Rechazar todas las reservas'}
+            </DialogTitle>
+            <DialogDescription>
+              {confirmAllAction === 'approve'
+                ? `Se van a aprobar ${pendingItems.length} reserva(s) pendiente(s). ¿Estás seguro?`
+                : `Se van a rechazar ${pendingItems.length} reserva(s) pendiente(s). ¿Estás seguro?`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmAllAction(null)}>Cancelar</Button>
+            <Button
+              variant={confirmAllAction === 'approve' ? 'default' : 'destructive'}
+              loading={approveMutation.isPending || rejectMutation.isPending}
+              onClick={confirmAllAction === 'approve' ? bulkApproveAll : bulkRejectAll}
+            >
+              {confirmAllAction === 'approve' ? 'Aprobar todas' : 'Rechazar todas'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
