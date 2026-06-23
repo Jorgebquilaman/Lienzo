@@ -5,29 +5,63 @@ Pasos para actualizar la aplicación desde GitHub en el servidor.
 ## 1. Backend (API)
 
 ```bash
-# Ir al directorio de publish
-cd /opt/Lienzo/publish
-
-# Detener el servicio
-systemctl stop lienzo-api
-
 # Ir al repositorio
 cd /opt/Lienzo
 
 # Pull de últimos cambios
 git pull origin main
 
+# Detener el servicio
+systemctl stop lienzo-api
+
 # Publicar backend
 dotnet publish src/Lienzo.API/Lienzo.API.csproj -c Release -o /opt/Lienzo/publish
 
-# Aplicar migraciones a la base de datos (si las hay)
-# Revisar si hay nuevas migraciones:
-ls src/Lienzo.Infrastructure/Data/Migrations/
+# Aplicar migraciones a la base de datos
+```
 
-# Si hay migraciones nuevas, generar el SQL y aplicarlo:
-dotnet ef migrations script --output /tmp/migrate.sql --project src/Lienzo.Infrastructure --startup-project src/Lienzo.API
+### Migraciones de Base de Datos
+
+La base de datos es PostgreSQL. Las migraciones se aplican con SQL directo porque la connection string de `LienzoDbContextFactory` usa credenciales distintas a la BD real.
+
+#### Opción 1: PostgreSQL local
+```bash
+# Generar script SQL con las migraciones nuevas
+dotnet ef migrations script --output /tmp/migrate.sql \
+  --project src/Lienzo.Infrastructure \
+  --startup-project src/Lienzo.API
+
+# Aplicar a la BD local
+psql -h localhost -U lienzo -d lienzo -f /tmp/migrate.sql
+```
+
+#### Opción 2: PostgreSQL en Docker
+```bash
+# Generar script SQL
+dotnet ef migrations script --output /tmp/migrate.sql \
+  --project src/Lienzo.Infrastructure \
+  --startup-project src/Lienzo.API
+
+# Aplicar al contenedor
 docker exec -i lienzo-db psql -U lienzo -d lienzo -f /tmp/migrate.sql
+```
 
+#### Opción 3: PostgreSQL remoto
+```bash
+# Generar script SQL
+dotnet ef migrations script --output /tmp/migrate.sql \
+  --project src/Lienzo.Infrastructure \
+  --startup-project src/Lienzo.API
+
+# Aplicar a la BD remota (reemplazar host, usuario y puerto según corresponda)
+psql -h 192.168.1.100 -U lienzo -d lienzo -f /tmp/migrate.sql
+```
+
+> **Nota:** Si no hay migraciones nuevas, el comando `dotnet ef migrations script` mostrará un mensaje indicando que no hay nada que aplicar. Se puede omitir este paso.
+
+> **Nota 2:** La contraseña de la BD es `lienzo123`. Si `psql` la pide, se puede usar `PGPASSWORD=lienzo123 psql ...` para evitar el prompt.
+
+```bash
 # Iniciar el servicio
 systemctl start lienzo-api
 
@@ -52,30 +86,43 @@ npm run build
 # Copiar build al directorio servido por nginx
 cp -r dist/* /var/www/lienzo/html/
 
-# O si se usa la publish del backend para servir los archivos estáticos:
+# O si se sirve estático desde el propio backend:
 cp -r dist/* /opt/Lienzo/publish/wwwroot/
 ```
 
 ## 3. Verificar
 
-- API: `curl http://localhost:5002/api/health` (o el endpoint configurado)
-- Web: `curl http://localhost` (o la URL del dominio)
-- Base de datos: `docker exec -i lienzo-db psql -U lienzo -d lienzo -c "SELECT version();"`
+```bash
+# API
+curl http://localhost:5002/api/health
+
+# Web
+curl http://localhost
+
+# Base de datos
+# Docker:
+docker exec -i lienzo-db psql -U lienzo -d lienzo -c "SELECT version();"
+# Local:
+psql -h localhost -U lienzo -d lienzo -c "SELECT version();"
+```
 
 ## 4. Rollback
 
 Si algo falla:
 
 ```bash
-# Backend: volver al commit anterior
+# Volver al commit anterior
 cd /opt/Lienzo
 git reset --hard HEAD~1
+
+# Rebuild backend
 dotnet publish src/Lienzo.API/Lienzo.API.csproj -c Release -o /opt/Lienzo/publish
 systemctl restart lienzo-api
 
-# Frontend: rebuild con versión anterior
+# Rebuild frontend
 cd /opt/Lienzo/src/Lienzo.Web
-git reset --hard HEAD~1
 npm run build
 cp -r dist/* /var/www/lienzo/html/
 ```
+
+> **Importante:** El rollback de base de datos requiere revertir las migraciones manualmente si se aplicaron cambios de esquema. No hay un comando automático para esto.
