@@ -206,7 +206,7 @@ export default function AdminReservations() {
         <Select
           placeholder="Todos los estados"
           value={statusFilter}
-          onChange={(e) => handleStatusFilter(e.target.value)}
+          onValueChange={(v) => handleStatusFilter(v)}
           options={[
             { value: 'Pending', label: 'Pendientes' },
             { value: 'Approved', label: 'Aprobadas' },

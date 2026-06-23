@@ -76,14 +76,16 @@ interface ReservationModalProps {
   defaultStartTime?: string;
   defaultEndTime?: string;
   defaultActividadId?: string;
+  defaultBuildingId?: string;
+  defaultTitle?: string;
 }
 
-export function ReservationModal({ open, onOpenChange, classroom, reservation, onSuccess, defaultDate, defaultStartTime, defaultEndTime, defaultActividadId }: ReservationModalProps) {
+export function ReservationModal({ open, onOpenChange, classroom, reservation, onSuccess, defaultDate, defaultStartTime, defaultEndTime, defaultActividadId, defaultBuildingId, defaultTitle }: ReservationModalProps) {
   const [conflict, setConflict] = useState<{ hasConflict: boolean } | null>(null);
   const [checkingConflict, setCheckingConflict] = useState(false);
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [selectedActividadId, setSelectedActividadId] = useState('');
-  const [selectedBuildingId, setSelectedBuildingId] = useState('');
+  const [selectedBuildingId, setSelectedBuildingId] = useState(defaultBuildingId || '');
   const [selectedClassroomId, setSelectedClassroomId] = useState('');
   const isEditing = !!reservation;
   const needsClassroomSelection = !classroom && !reservation;
@@ -115,7 +117,7 @@ export function ReservationModal({ open, onOpenChange, classroom, reservation, o
         })(),
         startTime: reservation ? reservation.startTime.slice(0, 5) : defaultStartTime || '08:00',
         endTime: reservation ? reservation.endTime.slice(0, 5) : defaultEndTime || '10:00',
-        title: reservation ? reservation.title : '',
+        title: reservation ? reservation.title : defaultTitle || '',
         description: reservation ? reservation.description || '' : '',
         isRecurring: false,
         endDate: '',
@@ -123,7 +125,7 @@ export function ReservationModal({ open, onOpenChange, classroom, reservation, o
       setSelectedDays([]);
       setSelectedActividadId(reservation ? (reservation as any).actividadId || '' : defaultActividadId || '');
       setConflict(null);
-      setSelectedBuildingId('');
+      setSelectedBuildingId(defaultBuildingId || '');
       setSelectedClassroomId('');
     }
   }, [open, reservation, defaultDate, defaultStartTime, defaultEndTime, defaultActividadId, reset]);
@@ -270,7 +272,9 @@ export function ReservationModal({ open, onOpenChange, classroom, reservation, o
                     placeholder="Seleccionar aula"
                     value={selectedClassroomId}
                     onValueChange={(v) => setSelectedClassroomId(v)}
-                    options={(classrooms || []).map((c: any) => ({ value: c.id, label: `${c.name} (Piso ${c.floor})` }))}
+                    options={(classrooms || [])
+                      .sort((a: any, b: any) => a.name.localeCompare(b.name, 'es', { numeric: true }))
+                      .map((c: any) => ({ value: c.id, label: `${c.name} (Piso ${c.floor})` }))}
                   />
                 </div>
               </>

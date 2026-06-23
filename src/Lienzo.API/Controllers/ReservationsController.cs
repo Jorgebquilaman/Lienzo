@@ -86,6 +86,13 @@ public class ReservationsController : BaseApiController
         return HandleResult(result);
     }
 
+    [HttpPatch("{id:guid}/cancel-future")]
+    public async Task<IActionResult> CancelFuture(Guid id)
+    {
+        var result = await Mediator.Send(new CancelRecurringFutureCommand(id));
+        return HandleResult(result);
+    }
+
     [Authorize(Roles = "Admin")]
     [HttpPatch("{id:guid}/move")]
     public async Task<IActionResult> Move(Guid id, [FromBody] MoveReservationRequest request)

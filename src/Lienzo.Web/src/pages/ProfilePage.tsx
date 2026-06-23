@@ -3,8 +3,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation } from '@tanstack/react-query';
-import { User, Save, Lock, Camera } from 'lucide-react';
+import { User as UserIcon, Save, Lock, Camera } from 'lucide-react';
 import { api } from '@/lib/api';
+import type { User } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -84,7 +85,7 @@ export default function ProfilePage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <User className="h-5 w-5" />
+            <UserIcon className="h-5 w-5" />
             Información Personal
           </CardTitle>
         </CardHeader>

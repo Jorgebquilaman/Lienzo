@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  ChevronLeft, ChevronRight, Building2, Repeat, CalendarDays, User, Clock, MapPin, Tag, Calendar, Plus, BookOpen, ListOrdered, Search, Move, ClipboardCheck,
+  ChevronLeft, ChevronRight, Building2, Repeat, CalendarDays, User, Clock, MapPin, Tag, Calendar, Plus, BookOpen, ListOrdered, Search, Move, ClipboardCheck, AlertTriangle,
 } from 'lucide-react';
 import { addDays, subDays, format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -112,6 +112,7 @@ export default function SchedulePage() {
   const [buildingId, setBuildingId] = useState('');
   const [classroomId, setClassroomId] = useState('');
   const [colorMode, setColorMode] = useState<'status' | 'period'>('status');
+  const [viewMode, setViewMode] = useState<'classroom' | 'time'>('classroom');
 
   const dateStr = format(currentDate, 'yyyy-MM-dd');
   const dayName = format(currentDate, 'EEEE', { locale: es });
@@ -196,6 +197,17 @@ export default function SchedulePage() {
     },
   });
 
+  const cancelFutureMutation = useMutation({
+    mutationFn: (id: string) => api.patch(`/reservations/${id}/cancel-future`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['schedule'] });
+      setSelectedReservation(null);
+    },
+    onError: (err: any) => {
+      alert(err?.message || 'Error al cancelar futuras reservas');
+    },
+  });
+
   interface Actividad { id: string; nombre: string; codigoMateria: string; periodoNombre?: string; carreraNombre?: string; aulaId?: string; aulaNombre?: string; diaSemana?: string; horaInicio?: string; horaFin?: string; docenteIds: string[]; docentesNombres?: string; }
 
   const { data: actividades } = useQuery({
@@ -205,8 +217,13 @@ export default function SchedulePage() {
 
   const unassignedActividades = useMemo(() => {
     if (!actividades) return [];
-    return actividades.filter((a) => a.diaSemana && !a.aulaId);
-  }, [actividades]);
+    const reservedActividadIds = new Set(
+      (reservations || []).filter((r) => r.actividadId).map((r) => r.actividadId)
+    );
+    return actividades.filter(
+      (a) => a.diaSemana && !a.aulaId && !reservedActividadIds.has(a.id)
+    );
+  }, [actividades, reservations]);
 
   const [showUnassigned, setShowUnassigned] = useState(false);
   const [unassignedAct, setUnassignedAct] = useState<Actividad | null>(null);
@@ -316,6 +333,15 @@ export default function SchedulePage() {
           />
         </div>
 
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setViewMode(prev => prev === 'classroom' ? 'time' : 'classroom')}
+          className={`${viewMode === 'time' ? 'bg-accent-50 border-accent-300 text-accent-700' : ''}`}
+        >
+          {viewMode === 'classroom' ? 'Por horarios' : 'Por aulas'}
+        </Button>
+
         <div className="flex items-center gap-1">
           <Button variant="outline" size="sm" onClick={prevDay}>
             <ChevronLeft className="h-4 w-4" />
@@ -422,13 +448,80 @@ export default function SchedulePage() {
               <CalendarDays className="h-12 w-12 mb-3" />
               <p className="font-medium">No hay aulas en este edificio</p>
             </div>
+          ) : viewMode === 'time' ? (
+            <div className="overflow-x-auto">
+              <div className="min-w-[900px]" style={{ display: 'grid', gridTemplateColumns: '80px 1fr' }}>
+                <div className="sticky left-0 z-10 p-2 text-xs font-medium text-primary-500 uppercase tracking-wider min-h-[36px] flex items-center border-r border-primary-200 bg-white">
+                  Horario
+                </div>
+                <div className="flex border-b border-primary-200 bg-primary-50/50">
+                  {filteredClassrooms.map((c) => (
+                    <div key={c.id} className="w-36 shrink-0 p-2 text-center text-xs font-medium text-primary-500 border-l border-primary-200">
+                      {c.name}
+                    </div>
+                  ))}
+                </div>
+                {visibleHours.map((hour) => (
+                  <Fragment key={hour}>
+                    <div className="sticky left-0 z-10 p-2 flex items-center text-sm font-medium text-primary-700 border-b border-primary-100 min-h-[36px] border-r border-primary-200 bg-white">
+                      {hour.toString().padStart(2, '0')}:00
+                    </div>
+                    <div className="flex border-b border-primary-100 last:border-b-0">
+                      {filteredClassrooms.map((classroom) => {
+                        const classroomReservations = reservationsByClassroom[classroom.id] || [];
+                        const cellStart = hour * 60;
+                        const cellEnd = (hour + 1) * 60;
+                        const reservation = classroomReservations.find((r) => {
+                          const rs = toMinutes(r.startTime);
+                          const re = toMinutes(r.endTime);
+                          return rs < cellEnd && re > cellStart;
+                        });
+                        return (
+                          <div key={classroom.id}
+                            className="w-36 shrink-0 relative min-h-[36px] border-l border-primary-100 group cursor-pointer"
+                            onClick={() => {
+                              if (!reservation) {
+                                const startStr = `${hour.toString().padStart(2, '0')}:00`;
+                                const endStr = `${(hour + 1).toString().padStart(2, '0')}:00`;
+                                setCreateSlot({ classroom, startTime: startStr, endTime: endStr });
+                              }
+                            }}
+                          >
+                            {reservation && (
+                              <div
+                                className={`absolute inset-1 rounded px-1.5 py-1 text-xs text-white overflow-hidden cursor-pointer hover:opacity-90 flex items-center ${getBarColor(reservation)}`}
+                                onClick={(e) => { e.stopPropagation(); setSelectedReservation(reservation); }}
+                                title={`${reservation.title} (${reservation.startTime}-${reservation.endTime})`}
+                              >
+                                <span className="truncate leading-tight font-medium">
+                                  {reservation.startTime !== `${hour.toString().padStart(2, '0')}:00`
+                                    ? `${reservation.startTime} ${reservation.title}`
+                                    : reservation.title}
+                                </span>
+                              </div>
+                            )}
+                            {!reservation && (
+                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="flex items-center gap-1 text-xs text-accent-500 bg-white/80 rounded-full px-2 py-0.5 shadow-sm border border-accent-200">
+                                  <Plus className="h-3 w-3" /> Reservar
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </Fragment>
+                ))}
+              </div>
+            </div>
           ) : (
             <div className="overflow-x-auto">
-              <div className="min-w-[900px]">
+              <div className="min-w-[900px]" style={{ display: 'grid', gridTemplateColumns: '176px 1fr' }}>
+                <div className="sticky left-0 z-10 p-2 text-xs font-medium text-primary-500 uppercase tracking-wider min-h-[48px] flex items-center border-r border-primary-200 bg-white">
+                  Aula
+                </div>
                 <div className="flex border-b border-primary-200 bg-primary-50/50">
-                  <div className="w-44 flex-shrink-0 p-2 text-xs font-medium text-primary-500 uppercase tracking-wider">
-                    Aula
-                  </div>
                   <div className="flex-1 flex">
                     {visibleHours.map((h) => (
                       <div
@@ -440,21 +533,20 @@ export default function SchedulePage() {
                     ))}
                   </div>
                 </div>
-
-                  {filteredClassrooms.map((classroom) => {
-                    const classroomReservations = reservationsByClassroom[classroom.id] || [];
-                    return (
-                      <div key={classroom.id} className="flex border-b border-primary-100 last:border-b-0">
-                        <div className="w-44 flex-shrink-0 p-2 flex items-center text-sm font-medium text-primary-700 border-r border-primary-100" title={`${classroom.name} (Piso ${classroom.floor})`}>
-                          {classroom.name}
-                          <span className="ml-1 text-xs text-primary-400 font-normal">
-                            (P{classroom.floor})
-                          </span>
-                        </div>
-                        <div
-                          className="flex-1 relative min-h-[48px] cursor-pointer"
-                          onClick={(e) => handleTimelineClick(e, classroom)}
-                        >
+                {filteredClassrooms.map((classroom) => {
+                  const classroomReservations = reservationsByClassroom[classroom.id] || [];
+                  return (
+                    <Fragment key={classroom.id}>
+                      <div className="sticky left-0 z-10 p-2 flex items-center text-sm font-medium text-primary-700 border-b border-primary-100 min-h-[48px] border-r border-primary-200 bg-white" title={`${classroom.name} (Piso ${classroom.floor})`}>
+                        {classroom.name}
+                        <span className="ml-1 text-xs text-primary-400 font-normal">
+                          (P{classroom.floor})
+                        </span>
+                      </div>
+                      <div
+                        className="relative min-h-[48px] cursor-pointer border-b border-primary-100 last:border-b-0 group"
+                        onClick={(e) => handleTimelineClick(e, classroom)}
+                      >
                           {visibleHours.map((h) => (
                               <div
                                 key={h}
@@ -462,9 +554,8 @@ export default function SchedulePage() {
                                 style={{ left: `${((h - 7) / 15) * 100}%`, width: `${(1 / 15) * 100}%` }}
                               />
                           ))}
-                          {/* Empty state hint when no reservations */}
                           {classroomReservations.length === 0 && (
-                            <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                               <div className="flex items-center gap-1 text-xs text-accent-500 bg-white/80 rounded-full px-2 py-0.5 shadow-sm border border-accent-200">
                                 <Plus className="h-3 w-3" /> Reservar
                               </div>
@@ -494,10 +585,10 @@ export default function SchedulePage() {
                               </div>
                             );
                           })}
-                        </div>
                       </div>
-                    );
-                  })}
+                    </Fragment>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -540,10 +631,12 @@ export default function SchedulePage() {
       <ReservationModal
         open={!!unassignedAct}
         onOpenChange={(open) => { if (!open) setUnassignedAct(null); }}
-        defaultDate={unassignedAct ? getNextDateForDay(unassignedAct.diaSemana!) : undefined}
+        defaultDate={dateStr}
         defaultStartTime={unassignedAct?.horaInicio}
         defaultEndTime={unassignedAct?.horaFin}
         defaultActividadId={unassignedAct?.id}
+        defaultBuildingId={buildingId || undefined}
+        defaultTitle={unassignedAct?.nombre}
         onSuccess={() => {
           setUnassignedAct(null);
           setShowUnassigned(false);
@@ -649,6 +742,34 @@ export default function SchedulePage() {
                   <p className="text-sm text-primary-600">{formatRecurrenceRule(selectedReservation.recurrenceRule)}</p>
                 </div>
               )}
+              {selectedReservation.recurrenceRule && (selectedReservation.status === 'Approved' || selectedReservation.status === 'Pending') && !movingReservation && (
+                <div className="pt-2 border-t border-primary-100">
+                  <div className="flex items-start gap-2 p-2 rounded-lg bg-red-50 border border-red-200 mb-2">
+                    <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
+                    <p className="text-xs text-red-700">
+                      Se cancelarán esta clase y todas las futuras de la reservación periódica. El aula quedará libre para nuevas reservas.
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full border-red-300 text-red-600 hover:bg-red-50"
+                    disabled={cancelFutureMutation.isPending}
+                    onClick={() => {
+                      if (window.confirm('¿Cancelar esta clase y todas las futuras?')) {
+                        cancelFutureMutation.mutate(selectedReservation.id);
+                      }
+                    }}
+                  >
+                    {cancelFutureMutation.isPending ? 'Cancelando...' : 'Cancelar desde próxima clase'}
+                  </Button>
+                </div>
+              )}
+              <div className="pt-2 border-t border-primary-100">
+                <Button variant="ghost" size="sm" className="w-full" onClick={() => setSelectedReservation(null)}>
+                  Salir
+                </Button>
+              </div>
             </DialogBody>
           </DialogContent>
         )}

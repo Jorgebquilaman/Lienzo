@@ -136,20 +136,20 @@ export default function ClassroomBrowser() {
                   label="Edificio"
                   placeholder="Todos"
                   value={buildingFilter}
-                  onChange={(e) => setBuildingFilter(e.target.value)}
+                  onValueChange={v => setBuildingFilter(v)}
                   options={buildings?.map((b) => ({ value: b.id, label: b.name })) || []}
                 />
                 <Select
                   label="Tipo"
                   placeholder="Todos"
                   value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value)}
+                  onValueChange={v => setTypeFilter(v)}
                   options={classroomTypes}
                 />
                 <Select
                   label="Ordenar"
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
+                  onValueChange={v => setSortBy(v)}
                   options={[
                     { value: 'name-asc', label: 'Nombre A-Z' },
                     { value: 'name-desc', label: 'Nombre Z-A' },
@@ -190,20 +190,20 @@ export default function ClassroomBrowser() {
                     label="Edificio"
                     placeholder="Todos"
                     value={buildingFilter}
-                    onChange={(e) => setBuildingFilter(e.target.value)}
+                    onValueChange={v => setBuildingFilter(v)}
                     options={buildings?.map((b) => ({ value: b.id, label: b.name })) || []}
                   />
                   <Select
                     label="Tipo"
                     placeholder="Todos"
                     value={typeFilter}
-                    onChange={(e) => setTypeFilter(e.target.value)}
+                    onValueChange={v => setTypeFilter(v)}
                     options={classroomTypes}
                   />
                   <Select
                     label="Ordenar"
                     value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
+                    onValueChange={v => setSortBy(v)}
                     options={[
                       { value: 'name-asc', label: 'Nombre A-Z' },
                       { value: 'name-desc', label: 'Nombre Z-A' },

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { format } from 'date-fns';
@@ -125,6 +125,8 @@ export default function TVDashboard() {
   const [showConfig, setShowConfig] = useState(true);
   const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(null);
   const [configCountdown, setConfigCountdown] = useState(CONFIG_TIMEOUT / 1000);
+  const [progress, setProgress] = useState(1);
+  const lastViewChangeRef = useRef(Date.now());
 
   useEffect(() => {
     const mq = window.matchMedia('(orientation: portrait)');
@@ -234,6 +236,25 @@ export default function TVDashboard() {
     return () => clearInterval(interval);
   }, [totalViews, showConfig]);
 
+  // Reset progress timer when view changes
+  useEffect(() => {
+    lastViewChangeRef.current = Date.now();
+    setProgress(0);
+  }, [currentView, showConfig]);
+
+  // Update progress bar
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (showConfig) {
+        setProgress(configCountdown / (CONFIG_TIMEOUT / 1000));
+      } else if (totalViews > 0) {
+        const elapsed = Date.now() - lastViewChangeRef.current;
+        setProgress(Math.min(1, elapsed / VIEW_DURATION));
+      }
+    }, 100);
+    return () => clearInterval(interval);
+  }, [showConfig, configCountdown, totalViews]);
+
   const stats = useMemo(() => {
     const allClassrooms = buildings.flatMap((b) => b.floors.flatMap((f) => f.classrooms));
     return {
@@ -304,6 +325,9 @@ export default function TVDashboard() {
       {/* Header */}
       <div className={`flex items-center justify-between ${isPortrait ? 'px-4 py-2' : 'px-8 py-4'} ${t.headerBg}`}>
         <div className="flex items-center gap-3">
+          <img src="https://iupa.edu.ar/wp-content/themes/IUPA-NUEVO/img/svg/Logo-IUPA.svg"
+            alt="IUPA"
+            className={`h-8 ${theme === 'light' ? 'brightness-0 saturate-100' : ''}`} />
           <h1 className={`font-bold tracking-tight ${isPortrait ? 'text-xl' : 'text-3xl'}`}>Lienzo</h1>
           <span className={`${isPortrait ? 'text-base' : 'text-xl'} ${theme === 'dark' ? 'text-primary-300/70' : 'text-primary-400'} font-light`}>|</span>
           <span className={`font-light ${t.textMuted} flex items-center gap-2 ${isPortrait ? 'text-lg' : 'text-2xl'}`}>
@@ -376,9 +400,19 @@ export default function TVDashboard() {
       </div>
 
       {/* Footer */}
-      <div className={`absolute bottom-0 left-0 right-0 flex items-center justify-between ${isPortrait ? 'px-4 py-2' : 'px-8 py-3'} ${t.footerBg} ${t.footerText} text-sm`}>
-        <span>Datos actualizados automáticamente</span>
-        <span>Lienzo - Sistema de Gestión de Aulas</span>
+      <div className={`absolute bottom-0 left-0 right-0 ${t.footerBg}`}>
+        {!showConfig && totalViews > 0 && (
+          <div className="h-1 bg-white/10">
+            <div
+              className="h-full bg-primary-400 transition-all duration-100 ease-linear"
+              style={{ width: `${(1 - progress) * 100}%` }}
+            />
+          </div>
+        )}
+        <div className={`flex items-center justify-between ${isPortrait ? 'px-4 py-2' : 'px-8 py-3'} ${t.footerText} text-sm`}>
+          <span>Datos actualizados automáticamente</span>
+          <span>Lienzo - Sistema de Gestión de Aulas</span>
+        </div>
       </div>
     </div>
   );
@@ -401,17 +435,17 @@ function BuildingView({ building, reservations, theme, isPortrait }: { building:
   const size = total <= 6 ? 'xl' : total <= 14 ? 'lg' : total <= 28 ? 'md' : 'sm';
 
   const landscapeSizes = {
-    xl: { card: 'p-6', name: 'text-2xl', dot: 'h-4 w-4', sub: 'text-xs', cols: 'grid-cols-2 md:grid-cols-3', gap: 'gap-3', section: 'text-lg', sectionBar: 'h-5' },
-    lg: { card: 'p-4', name: 'text-xl', dot: 'h-3 w-3', sub: 'text-[11px]', cols: 'grid-cols-2 md:grid-cols-4', gap: 'gap-2', section: 'text-base', sectionBar: 'h-4' },
-    md: { card: 'p-3', name: 'text-base', dot: 'h-2.5 w-2.5', sub: 'text-[10px]', cols: 'grid-cols-3 md:grid-cols-6', gap: 'gap-1.5', section: 'text-sm', sectionBar: 'h-3.5' },
-    sm: { card: 'p-2', name: 'text-xs', dot: 'h-2 w-2', sub: 'text-[9px]', cols: 'grid-cols-4 md:grid-cols-8 lg:grid-cols-10', gap: 'gap-1', section: 'text-xs', sectionBar: 'h-3' },
+    xl: { card: 'p-6', name: 'text-2xl', dot: 'h-4 w-4', sub: 'text-xs', cols: 'grid-cols-4', gap: 'gap-3', section: 'text-lg', sectionBar: 'h-5' },
+    lg: { card: 'p-4', name: 'text-xl', dot: 'h-3 w-3', sub: 'text-[11px]', cols: 'grid-cols-4', gap: 'gap-2', section: 'text-base', sectionBar: 'h-4' },
+    md: { card: 'p-3', name: 'text-base', dot: 'h-2.5 w-2.5', sub: 'text-[10px]', cols: 'grid-cols-4', gap: 'gap-1.5', section: 'text-sm', sectionBar: 'h-3.5' },
+    sm: { card: 'p-2', name: 'text-xs', dot: 'h-2 w-2', sub: 'text-[9px]', cols: 'grid-cols-4', gap: 'gap-1', section: 'text-xs', sectionBar: 'h-3' },
   };
 
   const portraitSizes = {
-    xl: { card: 'p-5', name: 'text-xl', dot: 'h-3.5 w-3.5', sub: 'text-xs', cols: 'grid-cols-1 md:grid-cols-2', gap: 'gap-2', section: 'text-base', sectionBar: 'h-4' },
-    lg: { card: 'p-4', name: 'text-lg', dot: 'h-3 w-3', sub: 'text-[11px]', cols: 'grid-cols-1 md:grid-cols-2', gap: 'gap-2', section: 'text-sm', sectionBar: 'h-3.5' },
-    md: { card: 'p-3', name: 'text-base', dot: 'h-2.5 w-2.5', sub: 'text-[10px]', cols: 'grid-cols-2', gap: 'gap-1.5', section: 'text-sm', sectionBar: 'h-3' },
-    sm: { card: 'p-2', name: 'text-sm', dot: 'h-2 w-2', sub: 'text-[9px]', cols: 'grid-cols-2', gap: 'gap-1', section: 'text-xs', sectionBar: 'h-2.5' },
+    xl: { card: 'p-5', name: 'text-xl', dot: 'h-3.5 w-3.5', sub: 'text-xs', cols: 'grid-cols-3', gap: 'gap-2', section: 'text-base', sectionBar: 'h-4' },
+    lg: { card: 'p-4', name: 'text-lg', dot: 'h-3 w-3', sub: 'text-[11px]', cols: 'grid-cols-3', gap: 'gap-2', section: 'text-sm', sectionBar: 'h-3.5' },
+    md: { card: 'p-3', name: 'text-base', dot: 'h-2.5 w-2.5', sub: 'text-[10px]', cols: 'grid-cols-3', gap: 'gap-1.5', section: 'text-sm', sectionBar: 'h-3' },
+    sm: { card: 'p-2', name: 'text-sm', dot: 'h-2 w-2', sub: 'text-[9px]', cols: 'grid-cols-3', gap: 'gap-1', section: 'text-xs', sectionBar: 'h-2.5' },
   };
 
   const s = (isPortrait ? portraitSizes : landscapeSizes)[size];
@@ -461,14 +495,26 @@ function BuildingView({ building, reservations, theme, isPortrait }: { building:
                           <div className={`${s.dot} rounded-full shrink-0 ${STATUS_COLORS[room.status] || 'bg-gray-500'}`} />
                         </div>
                         {room.status === 'occupied' && room.currentReservation && (
-                          <div className={`${s.sub} ${t.cardSub} leading-tight truncate`}>
-                            {room.currentReservation.title}
-                          </div>
+                          <>
+                            <div className={`${s.sub} ${t.cardSub} leading-tight truncate`}>
+                              {room.currentReservation.title}
+                            </div>
+                            <div className={`${s.sub} ${t.textDim} leading-tight truncate`}>
+                              {room.currentReservation.userName}
+                            </div>
+                          </>
                         )}
                         {room.status === 'available' && (
-                          <div className={`${s.sub} ${t.textDim} leading-tight truncate`}>
-                            {next ? next.title : ''}
-                          </div>
+                          <>
+                            <div className={`${s.sub} ${t.textDim} leading-tight truncate`}>
+                              {next ? next.title : ''}
+                            </div>
+                            {next && (
+                              <div className={`${s.sub} ${t.textDim} leading-tight truncate`}>
+                                {next.userName}
+                              </div>
+                            )}
+                          </>
                         )}
                         {room.status === 'maintenance' && (
                           <div className={`${s.sub} ${t.textDim} leading-tight truncate`}>Mantenimiento</div>
@@ -488,7 +534,10 @@ function BuildingView({ building, reservations, theme, isPortrait }: { building:
 }
 
 function ScheduleView({ reservations, theme, isPortrait }: { reservations: ReservationDto[]; theme: 'dark' | 'light'; isPortrait: boolean }) {
-  if (!reservations.length) {
+  const currentTime = format(new Date(), 'HH:mm');
+  const upcoming = reservations.filter((r) => r.endTime > currentTime);
+
+  if (!upcoming.length) {
     return (
       <div className={`flex flex-col items-center justify-center h-full text-2xl ${theme === 'dark' ? 'text-white/40' : 'text-gray-400'}`}>
         <div className="text-6xl mb-4 opacity-30">📅</div>
@@ -500,13 +549,10 @@ function ScheduleView({ reservations, theme, isPortrait }: { reservations: Reser
   return (
     <div className="h-full overflow-y-auto py-4">
       <div className={isPortrait ? 'space-y-2' : 'space-y-3'}>
-        {reservations.map((r) => {
-          const isActive = r.startTime <= format(new Date(), 'HH:mm') && r.endTime > format(new Date(), 'HH:mm');
-          const isPast = r.endTime <= format(new Date(), 'HH:mm');
+        {upcoming.map((r) => {
+          const isActive = r.startTime <= currentTime && r.endTime > currentTime;
           const activeStyle = isActive
             ? `${theme === 'dark' ? 'bg-green-500/15 border-green-500/40 ring-1 ring-green-500/30' : 'bg-green-100 border-green-400 ring-1 ring-green-300'}`
-            : isPast
-            ? `${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'} opacity-50`
             : `${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`;
           return (
             <div

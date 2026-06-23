@@ -29,7 +29,7 @@ class FetchClient {
       } catch {
         // ignore parse error
       }
-      console.error(`API ${response.method} ${response.url} → ${response.status}: ${errorMessage}`);
+      console.error(`API ${response.status}: ${errorMessage}`);
       if (response.status === 401) {
         useAuthStore.getState().logout();
       }

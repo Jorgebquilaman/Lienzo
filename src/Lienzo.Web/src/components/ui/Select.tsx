@@ -8,6 +8,7 @@ interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>
   options: { value: string; label: string }[];
   placeholder?: string;
   onValueChange?: (value: string) => void;
+  onChange?: (e: React.ChangeEvent<HTMLSelectElement>) => void;
 }
 
 const Select = React.forwardRef<HTMLSelectElement, SelectProps>(

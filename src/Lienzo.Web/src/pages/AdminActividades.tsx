@@ -355,8 +355,8 @@ export default function AdminActividades() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-4 gap-y-4">
                 <Input label="Nombre" placeholder="Ej: Álgebra I" value={nombre} onChange={e => setNombre(e.target.value)} required />
                 <Input label="Código materia" placeholder="Ej: MAT-101" value={codigoMateria} onChange={e => setCodigoMateria(e.target.value)} required />
-                <Select label="Periodo" placeholder="Seleccionar..." value={periodoId} onChange={e => setPeriodoId(e.target.value)} options={periodos.map(p => ({ value: p.id, label: `${p.nombre} ${p.anio}` }))} required />
-                <Select label="Carrera" placeholder="Seleccionar..." value={carreraId} onChange={e => setCarreraId(e.target.value)} options={carreras.map(c => ({ value: c.id, label: c.nombre }))} required />
+                <Select label="Periodo" placeholder="Seleccionar..." value={periodoId} onValueChange={v => setPeriodoId(v)} options={periodos.map(p => ({ value: p.id, label: `${p.nombre} ${p.anio}` }))} required />
+                <Select label="Carrera" placeholder="Seleccionar..." value={carreraId} onValueChange={v => setCarreraId(v)} options={carreras.map(c => ({ value: c.id, label: c.nombre }))} required />
 
                 <div className="">
                   <label className="block text-sm font-medium text-primary-700 mb-2">Docentes a cargo</label>
@@ -413,8 +413,8 @@ export default function AdminActividades() {
 
                 {hasSchedule && (
                   <div className="space-y-3 pl-6 border-l-2 border-accent-200">
-                    <Select label="Aula" placeholder="Seleccionar..." value={aulaId} onChange={e => setAulaId(e.target.value)} options={classrooms.map(c => ({ value: c.id, label: c.name }))} required />
-                    <Select label="Día" placeholder="Seleccionar..." value={diaSemana} onChange={e => setDiaSemana(e.target.value)} options={DAYS.map(d => ({ value: d.value, label: d.label }))} required />
+                    <Select label="Aula" placeholder="Seleccionar..." value={aulaId} onValueChange={v => setAulaId(v)} options={classrooms.map(c => ({ value: c.id, label: c.name }))} required />
+                    <Select label="Día" placeholder="Seleccionar..." value={diaSemana} onValueChange={v => setDiaSemana(v)} options={DAYS.map(d => ({ value: d.value, label: d.label }))} required />
                     <div className="grid grid-cols-2 gap-3">
                       <Input type="time" label="Hora inicio" value={horaInicio} onChange={e => setHoraInicio(e.target.value)} required />
                       <Input type="time" label="Hora fin" value={horaFin} onChange={e => setHoraFin(e.target.value)} required />
