@@ -47,6 +47,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowAll");
+app.UseDefaultFiles();
 app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -54,6 +55,7 @@ app.UseWebSockets();
 app.MapControllers();
 app.MapHub<NotificationHub>("/hubs/notifications");
 app.MapHealthChecks("/health");
+app.MapFallbackToFile("index.html");
 
 using (var scope = app.Services.CreateScope())
 {
