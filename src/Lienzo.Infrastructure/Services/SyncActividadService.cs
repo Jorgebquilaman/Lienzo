@@ -23,7 +23,7 @@ public class SyncActividadService : ISyncActividadService
         await conn.OpenAsync();
 
         await using var cmd = new NpgsqlCommand(
-            @"SELECT c.comision, c.nombre, c.nombre || ' - ' || e.nombre, e.codigo, pl.periodo_lectivo, p.periodo, COALESCE(esp.edificacion, 0), cp.propuesta, sp.codigo
+            @"SELECT DISTINCT ON (c.comision) c.comision, c.nombre, c.nombre || ' - ' || e.nombre, e.codigo, pl.periodo_lectivo, p.periodo, COALESCE(esp.edificacion, 0), cp.propuesta, sp.codigo
               FROM negocio.sga_comisiones c
               JOIN negocio.sga_periodos_lectivos pl ON pl.periodo_lectivo = c.periodo_lectivo
               JOIN negocio.sga_periodos p ON p.periodo = pl.periodo
@@ -33,7 +33,7 @@ public class SyncActividadService : ISyncActividadService
               LEFT JOIN negocio.sga_propuestas sp ON sp.propuesta = cp.propuesta
               WHERE c.estado = 'A'
                 AND p.anio_academico = @anio
-              ORDER BY e.nombre, c.nombre",
+              ORDER BY c.comision, e.nombre, c.nombre",
             conn);
         cmd.Parameters.AddWithValue("anio", anioAcademico);
 
