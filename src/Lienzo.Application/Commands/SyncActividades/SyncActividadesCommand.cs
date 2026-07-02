@@ -155,12 +155,9 @@ public class SyncActividadesCommandHandler : IRequestHandler<SyncActividadesComm
             }
 
             // Update comision nombre and schedule for both new and existing
-            var needsUpdate = false;
-
             if (actividad.ComisionNombre != ext.Nombre)
             {
                 actividad.SetComisionNombre(ext.Nombre);
-                needsUpdate = true;
             }
 
             if (ext.DiaSemana is not null && ext.HoraInicio is not null && ext.HoraFin is not null)
@@ -182,12 +179,8 @@ public class SyncActividadesCommandHandler : IRequestHandler<SyncActividadesComm
                     actividad.DiasDictado = ext.DiasDictado;
                     actividad.UpdatedAt = DateTime.UtcNow;
                     horariosAsignados++;
-                    needsUpdate = true;
                 }
             }
-
-            if (needsUpdate)
-                _unitOfWork.Actividades.Update(actividad);
 
             if (ext.DocenteNames.Count > 0)
             {
