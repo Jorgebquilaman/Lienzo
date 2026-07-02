@@ -219,7 +219,7 @@ export default function BuildingFloorPlanTab({ building }: Props) {
                   <div
                     key={classroomId}
                     className="absolute flex items-center gap-1"
-                    style={{ left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%, -100%)' }}
+                    style={{ left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%, -50%)' }}
                     title={classroom?.name}
                   >
                     <div className="bg-blue-600 text-white text-xs font-medium px-2 py-0.5 rounded shadow whitespace-nowrap flex items-center gap-1">
