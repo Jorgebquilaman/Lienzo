@@ -203,7 +203,7 @@ export default function AdminBuildings() {
 
       {/* Floor plan dialog */}
       <Dialog open={floorPlanOpen} onOpenChange={setFloorPlanOpen}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Plano - {floorPlanBuilding?.name}</DialogTitle>
             <DialogDescription>

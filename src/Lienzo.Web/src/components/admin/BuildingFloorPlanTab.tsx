@@ -1,10 +1,10 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Upload, Search, Save, MapPin, X } from 'lucide-react';
+import { Upload, Save, MapPin, X, CheckCircle2, Circle } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import type { Building, Classroom } from '@/types';
 
 interface Position {
@@ -19,8 +19,7 @@ interface Props {
 
 export default function BuildingFloorPlanTab({ building }: Props) {
   const [positions, setPositions] = useState<Record<string, Position>>({});
-  const [selectedClassroom, setSelectedClassroom] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
+  const [selectedClassroomId, setSelectedClassroomId] = useState('');
   const [floorPlanUrl, setFloorPlanUrl] = useState(building.floorPlanUrl || '');
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -32,7 +31,6 @@ export default function BuildingFloorPlanTab({ building }: Props) {
     queryFn: () => api.get<Classroom[]>(`/buildings/${building.id}/classrooms`),
   });
 
-  // Load existing positions
   useEffect(() => {
     if (classrooms) {
       const loaded: Record<string, Position> = {};
@@ -74,7 +72,7 @@ export default function BuildingFloorPlanTab({ building }: Props) {
   });
 
   const handleImageClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!selectedClassroom || !imageRef.current) return;
+    if (!selectedClassroomId || !imageRef.current) return;
 
     const rect = imageRef.current.getBoundingClientRect();
     const x = Math.round(((e.clientX - rect.left) / rect.width) * 100);
@@ -82,9 +80,10 @@ export default function BuildingFloorPlanTab({ building }: Props) {
 
     setPositions((prev) => ({
       ...prev,
-      [selectedClassroom]: { classroomId: selectedClassroom, x, y },
+      [selectedClassroomId]: { classroomId: selectedClassroomId, x, y },
     }));
-  }, [selectedClassroom]);
+    setSelectedClassroomId('');
+  }, [selectedClassroomId]);
 
   const handleRemovePosition = (classroomId: string) => {
     setPositions((prev) => {
@@ -104,9 +103,13 @@ export default function BuildingFloorPlanTab({ building }: Props) {
     }
   };
 
-  const sortedClassrooms = classrooms
-    ?.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const selectedClassroom = classrooms?.find((c) => c.id === selectedClassroomId);
+  const placedClassrooms = classrooms?.filter((c) => positions[c.id] != null) ?? [];
+
+  const classroomOptions = (classrooms ?? [])
+    .filter((c) => positions[c.id] == null)
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((c) => ({ value: c.id, label: c.name }));
 
   return (
     <div className="space-y-4">
@@ -147,38 +150,74 @@ export default function BuildingFloorPlanTab({ building }: Props) {
           <p className="text-primary-400">Subí un PDF o imagen del plano del edificio</p>
         </div>
       ) : (
-        <div className="flex gap-6">
-          {/* Interactive floor plan */}
-          <div className="flex-1 relative">
-            {selectedClassroom && (
-              <div className="absolute top-2 left-2 z-10 bg-blue-600 text-white text-xs px-2 py-1 rounded shadow">
-                Click en el plano para colocar &quot;{classrooms?.find((c) => c.id === selectedClassroom)?.name}&quot;
-                <button
-                  className="ml-2 text-white/80 hover:text-white"
-                  onClick={() => setSelectedClassroom(null)}
+        <div className="space-y-4">
+          {/* Classroom selector */}
+          <div className="flex items-start gap-4">
+            <div className="flex-1">
+              <Select
+                label="Seleccioná un aula para colocar en el plano"
+                placeholder="— Elegir aula —"
+                options={classroomOptions}
+                value={selectedClassroomId}
+                onValueChange={setSelectedClassroomId}
+              />
+            </div>
+            <div className="min-w-[180px] pt-6">
+              {selectedClassroom && (
+                <div className="text-sm text-blue-700 bg-blue-50 rounded-lg px-3 py-2 flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  Colocando: {selectedClassroom.name}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Placed classrooms summary */}
+          {placedClassrooms.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-primary-500 font-medium">Ubicadas:</span>
+              {placedClassrooms.map((c) => (
+                <span
+                  key={c.id}
+                  className="inline-flex items-center gap-1 text-xs bg-green-50 text-green-700 rounded-full px-2.5 py-1"
                 >
-                  <X className="h-3 w-3 inline" />
-                </button>
+                  <CheckCircle2 className="h-3 w-3" />
+                  {c.name}
+                  <button
+                    className="text-green-400 hover:text-green-600 ml-0.5"
+                    onClick={() => handleRemovePosition(c.id)}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Floor plan image full width */}
+          <div className="relative bg-primary-50 rounded-lg border overflow-hidden">
+            {selectedClassroomId && (
+              <div className="absolute top-2 left-2 z-10 bg-blue-600 text-white text-xs px-2.5 py-1.5 rounded shadow">
+                Hacé click en el plano para colocar &quot;{selectedClassroom?.name}&quot;
               </div>
             )}
             <div
-              className="relative inline-block cursor-crosshair"
+              className="relative inline-block w-full cursor-crosshair"
               onClick={handleImageClick}
             >
               <img
                 ref={imageRef}
                 src={floorPlanUrl}
                 alt={`Plano de ${building.name}`}
-                className="max-w-full h-auto rounded-lg border"
+                className="w-full h-auto rounded-lg"
                 draggable={false}
               />
-              {/* Render markers */}
               {Object.entries(positions).map(([classroomId, pos]) => {
                 const classroom = classrooms?.find((c) => c.id === classroomId);
                 return (
                   <div
                     key={classroomId}
-                    className="absolute flex items-center gap-1 cursor-grab active:cursor-grabbing"
+                    className="absolute flex items-center gap-1"
                     style={{ left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%, -100%)' }}
                     title={classroom?.name}
                   >
@@ -201,58 +240,15 @@ export default function BuildingFloorPlanTab({ building }: Props) {
             </div>
           </div>
 
-          {/* Classroom list */}
-          <div className="w-64 flex-shrink-0">
-            <div className="relative mb-3">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-primary-400" />
-              <input
-                placeholder="Buscar aula..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full h-9 pl-8 pr-3 rounded-lg border border-primary-200 bg-white text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-              />
+          {/* Save button */}
+          {Object.keys(positions).length > 0 && (
+            <div className="flex justify-end">
+              <Button onClick={() => savePositionsMutation.mutate(Object.values(positions))} loading={savePositionsMutation.isPending}>
+                <Save className="h-4 w-4 mr-2" />
+                Guardar posiciones
+              </Button>
             </div>
-            <div className="space-y-1 max-h-[500px] overflow-y-auto">
-              {sortedClassrooms?.map((c) => {
-                const hasPosition = positions[c.id] != null;
-                return (
-                  <button
-                    key={c.id}
-                    className={`w-full text-left px-3 py-2 rounded-md text-sm flex items-center justify-between gap-2 transition-colors ${
-                      selectedClassroom === c.id
-                        ? 'bg-blue-100 text-blue-700'
-                        : hasPosition
-                          ? 'bg-green-50 text-green-700'
-                          : 'hover:bg-primary-50 text-primary-700'
-                    }`}
-                    onClick={() => setSelectedClassroom(c.id)}
-                  >
-                    <span className="truncate">{c.name}</span>
-                    {hasPosition ? (
-                      <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-green-500" />
-                    ) : (
-                      <div className="h-3.5 w-3.5 flex-shrink-0 rounded-full border-2 border-dashed border-primary-300" />
-                    )}
-                  </button>
-                );
-              })}
-              {(!sortedClassrooms || sortedClassrooms.length === 0) && (
-                <p className="text-sm text-primary-400 text-center py-4">
-                  {search ? 'Sin resultados' : 'Sin aulas'}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Save button */}
-      {floorPlanUrl && Object.keys(positions).length > 0 && (
-        <div className="flex justify-end">
-          <Button onClick={() => savePositionsMutation.mutate(Object.values(positions))} loading={savePositionsMutation.isPending}>
-            <Save className="h-4 w-4 mr-2" />
-            Guardar posiciones
-          </Button>
+          )}
         </div>
       )}
     </div>
