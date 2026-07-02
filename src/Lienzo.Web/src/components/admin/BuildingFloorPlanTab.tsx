@@ -74,7 +74,8 @@ export default function BuildingFloorPlanTab({ building }: Props) {
   const handleImageClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!selectedClassroomId || !imageRef.current) return;
 
-    const rect = imageRef.current.getBoundingClientRect();
+    const img = imageRef.current;
+    const rect = img.getBoundingClientRect();
     const x = Math.round(((e.clientX - rect.left) / rect.width) * 100);
     const y = Math.round(((e.clientY - rect.top) / rect.height) * 100);
 
@@ -194,22 +195,22 @@ export default function BuildingFloorPlanTab({ building }: Props) {
             </div>
           )}
 
-          {/* Floor plan image full width */}
-          <div className="relative bg-primary-50 rounded-lg border overflow-hidden">
+          {/* Floor plan image fit to viewport */}
+          <div className="relative bg-primary-50 rounded-lg border overflow-hidden" style={{ height: 'calc(100vh - 340px)' }}>
             {selectedClassroomId && (
               <div className="absolute top-2 left-2 z-10 bg-blue-600 text-white text-xs px-2.5 py-1.5 rounded shadow">
                 Hacé click en el plano para colocar &quot;{selectedClassroom?.name}&quot;
               </div>
             )}
             <div
-              className="relative inline-block w-full cursor-crosshair"
+              className="relative w-full h-full flex items-start justify-center cursor-crosshair"
               onClick={handleImageClick}
             >
               <img
                 ref={imageRef}
                 src={floorPlanUrl}
                 alt={`Plano de ${building.name}`}
-                className="w-full h-auto rounded-lg"
+                className="max-w-full max-h-full w-auto h-auto rounded-lg"
                 draggable={false}
               />
               {Object.entries(positions).map(([classroomId, pos]) => {
