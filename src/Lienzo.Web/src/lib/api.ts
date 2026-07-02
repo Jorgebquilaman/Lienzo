@@ -25,7 +25,7 @@ class FetchClient {
       let errorMessage = `HTTP ${response.status}`;
       try {
         const errorData = await response.json();
-        errorMessage = errorData.message || errorData.title || errorMessage;
+        errorMessage = errorData.detail || errorData.message || errorData.title || errorMessage;
       } catch {
         // ignore parse error
       }

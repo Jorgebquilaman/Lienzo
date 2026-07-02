@@ -24,6 +24,7 @@ export default function BuildingFloorPlanTab({ building }: Props) {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
+  const mapRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
   const { data: classrooms } = useQuery({
@@ -72,10 +73,9 @@ export default function BuildingFloorPlanTab({ building }: Props) {
   });
 
   const handleImageClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!selectedClassroomId || !imageRef.current) return;
+    if (!selectedClassroomId || !mapRef.current) return;
 
-    const img = imageRef.current;
-    const rect = img.getBoundingClientRect();
+    const rect = mapRef.current.getBoundingClientRect();
     const x = Math.round(((e.clientX - rect.left) / rect.width) * 100);
     const y = Math.round(((e.clientY - rect.top) / rect.height) * 100);
 
@@ -196,48 +196,53 @@ export default function BuildingFloorPlanTab({ building }: Props) {
           )}
 
           {/* Floor plan image fit to viewport */}
-          <div className="relative bg-primary-50 rounded-lg border overflow-hidden" style={{ height: 'calc(100vh - 340px)' }}>
+          <div className="relative bg-primary-50 rounded-lg border" style={{ height: 'calc(100vh - 340px)' }}>
             {selectedClassroomId && (
               <div className="absolute top-2 left-2 z-10 bg-blue-600 text-white text-xs px-2.5 py-1.5 rounded shadow">
                 Hacé click en el plano para colocar &quot;{selectedClassroom?.name}&quot;
               </div>
             )}
-            <div
-              className="relative w-full h-full flex items-start justify-center cursor-crosshair"
-              onClick={handleImageClick}
-            >
-              <img
-                ref={imageRef}
-                src={floorPlanUrl}
-                alt={`Plano de ${building.name}`}
-                className="max-w-full max-h-full w-auto h-auto rounded-lg"
-                draggable={false}
-              />
-              {Object.entries(positions).map(([classroomId, pos]) => {
-                const classroom = classrooms?.find((c) => c.id === classroomId);
-                return (
-                  <div
-                    key={classroomId}
-                    className="absolute flex items-center gap-1"
-                    style={{ left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%, -50%)' }}
-                    title={classroom?.name}
-                  >
-                    <div className="bg-blue-600 text-white text-xs font-medium px-2 py-0.5 rounded shadow whitespace-nowrap flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
-                      {classroom?.name || '?'}
-                      <button
-                        className="text-white/60 hover:text-white ml-0.5"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemovePosition(classroomId);
-                        }}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
+            <div className="flex items-start justify-center w-full h-full overflow-hidden">
+              <div ref={mapRef} className="relative inline-block max-w-full max-h-full cursor-crosshair" onClick={handleImageClick}>
+                <img
+                  ref={imageRef}
+                  src={floorPlanUrl}
+                  alt={`Plano de ${building.name}`}
+                  className="max-w-full max-h-full w-auto h-auto block"
+                  draggable={false}
+                  onLoad={() => {
+                    if (mapRef.current) {
+                      mapRef.current.style.width = 'auto';
+                      mapRef.current.style.height = 'auto';
+                    }
+                  }}
+                />
+                {Object.entries(positions).map(([classroomId, pos]) => {
+                  const classroom = classrooms?.find((c) => c.id === classroomId);
+                  return (
+                    <div
+                      key={classroomId}
+                      className="absolute flex items-center gap-1"
+                      style={{ left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%, -50%)' }}
+                      title={classroom?.name}
+                    >
+                      <div className="bg-blue-600 text-white text-xs font-medium px-2 py-0.5 rounded shadow whitespace-nowrap flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        {classroom?.name || '?'}
+                        <button
+                          className="text-white/60 hover:text-white ml-0.5"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemovePosition(classroomId);
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           </div>
 

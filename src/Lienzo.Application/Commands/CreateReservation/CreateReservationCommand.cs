@@ -39,6 +39,9 @@ public class CreateReservationCommandHandler : IRequestHandler<CreateReservation
             return Result<ReservationDto>.Failure("End date must be after start date", "INVALID_DATES");
 
         var startDate = command.Request.Date;
+        if (startDate < DateOnly.FromDateTime(DateTime.Now))
+            return Result<ReservationDto>.Failure("La fecha de la reserva no puede ser en el pasado", "INVALID_DATE");
+
         var dates = GetDates(startDate, command.Request.DaysOfWeek, command.Request.EndDate);
 
         foreach (var date in dates)
@@ -100,20 +103,27 @@ public class CreateReservationCommandHandler : IRequestHandler<CreateReservation
         var reservations = new List<Reservation>();
         foreach (var date in dates)
         {
-            var reservation = Reservation.Create(
-                command.Request.ClassroomId,
-                _currentUser.UserId,
-                command.Request.Title,
-                command.Request.Description,
-                date,
-                command.Request.StartTime,
-                command.Request.EndTime,
-                recurringGroupId,
-                recurrenceRule,
-                command.Request.ActividadId);
+            try
+            {
+                var reservation = Reservation.Create(
+                    command.Request.ClassroomId,
+                    _currentUser.UserId,
+                    command.Request.Title,
+                    command.Request.Description,
+                    date,
+                    command.Request.StartTime,
+                    command.Request.EndTime,
+                    recurringGroupId,
+                    recurrenceRule,
+                    command.Request.ActividadId);
 
-            await _unitOfWork.Reservations.AddAsync(reservation);
-            reservations.Add(reservation);
+                await _unitOfWork.Reservations.AddAsync(reservation);
+                reservations.Add(reservation);
+            }
+            catch (ArgumentException ex)
+            {
+                return Result<ReservationDto>.Failure(ex.Message, "VALIDATION");
+            }
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
