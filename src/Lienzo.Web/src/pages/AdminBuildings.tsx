@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, Search, RefreshCw, Map } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, RefreshCw, Map, Maximize2, Minimize2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -26,6 +26,7 @@ export default function AdminBuildings() {
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [floorPlanOpen, setFloorPlanOpen] = useState(false);
+  const [floorPlanFullScreen, setFloorPlanFullScreen] = useState(false);
   const [floorPlanBuilding, setFloorPlanBuilding] = useState<Building | null>(null);
   const [editing, setEditing] = useState<Building | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -202,13 +203,30 @@ export default function AdminBuildings() {
       </Dialog>
 
       {/* Floor plan dialog */}
-      <Dialog open={floorPlanOpen} onOpenChange={setFloorPlanOpen}>
-        <DialogContent className="max-w-6xl xl:max-w-[95vw] max-h-[90vh] overflow-y-auto">
+      <Dialog open={floorPlanOpen} onOpenChange={(open) => { setFloorPlanOpen(open); if (!open) setFloorPlanFullScreen(false); }}>
+        <DialogContent
+          className={
+            floorPlanFullScreen
+              ? '!max-w-none !w-screen !h-screen !max-h-screen !m-0 !rounded-none'
+              : 'max-w-6xl xl:max-w-[95vw] max-h-[90vh] overflow-y-auto'
+          }
+        >
           <DialogHeader>
-            <DialogTitle>Plano - {floorPlanBuilding?.name}</DialogTitle>
-            <DialogDescription>
-              Subí el plano del edificio y colocá las aulas sobre él
-            </DialogDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle>Plano - {floorPlanBuilding?.name}</DialogTitle>
+                <DialogDescription>
+                  Subí el plano del edificio y colocá las aulas sobre él
+                </DialogDescription>
+              </div>
+              <button
+                className="p-2 rounded-lg text-primary-500 hover:bg-primary-50 transition-colors"
+                title={floorPlanFullScreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+                onClick={() => setFloorPlanFullScreen(!floorPlanFullScreen)}
+              >
+                {floorPlanFullScreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
+              </button>
+            </div>
           </DialogHeader>
           <DialogBody>
             {floorPlanBuilding && <BuildingFloorPlanTab building={floorPlanBuilding} />}
