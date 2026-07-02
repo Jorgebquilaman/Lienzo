@@ -35,6 +35,7 @@ public class UpdateBuildingCommandHandler : IRequestHandler<UpdateBuildingComman
             building.FloorCount,
             building.IsActive,
             building.CodigoExterno,
-            building.CreatedAt));
+            building.CreatedAt,
+            building.FloorPlanUrl));
     }
 }

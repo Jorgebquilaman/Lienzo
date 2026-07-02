@@ -11,6 +11,7 @@ public class Building : BaseEntity
     public int FloorCount { get; private set; }
     public bool IsActive { get; private set; }
     public int? CodigoExterno { get; private set; }
+    public string? FloorPlanUrl { get; private set; }
     public IReadOnlyCollection<Classroom> Classrooms => _classrooms.AsReadOnly();
 
     private Building() { }
@@ -61,6 +62,12 @@ public class Building : BaseEntity
     public void SetCodigoExterno(int codigoExterno)
     {
         CodigoExterno = codigoExterno;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetFloorPlanUrl(string? floorPlanUrl)
+    {
+        FloorPlanUrl = floorPlanUrl;
         UpdatedAt = DateTime.UtcNow;
     }
 

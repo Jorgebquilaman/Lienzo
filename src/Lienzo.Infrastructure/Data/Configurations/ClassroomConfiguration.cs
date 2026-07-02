@@ -48,6 +48,12 @@ public class ClassroomConfiguration : IEntityTypeConfiguration<Classroom>
             .HasColumnName("url_imagen")
             .HasMaxLength(500);
 
+        builder.Property(e => e.MapPositionX)
+            .HasColumnName("posicion_x");
+
+        builder.Property(e => e.MapPositionY)
+            .HasColumnName("posicion_y");
+
         builder.Property(e => e.CreatedAt)
             .HasColumnName("creado_en")
             .IsRequired();

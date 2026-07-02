@@ -1,7 +1,9 @@
 using Lienzo.Application.Commands.CreateBuilding;
 using Lienzo.Application.Commands.DeleteBuilding;
+using Lienzo.Application.Commands.SetBuildingFloorPlan;
 using Lienzo.Application.Commands.SyncBuildings;
 using Lienzo.Application.Commands.UpdateBuilding;
+using Lienzo.Application.Commands.UpdateClassroomPositions;
 using Lienzo.Application.DTOs;
 using Lienzo.Application.Queries.GetAllBuildings;
 using Lienzo.Application.Queries.GetBuildingById;
@@ -64,6 +66,22 @@ public class BuildingsController : BaseApiController
     public async Task<IActionResult> Sync()
     {
         var result = await Mediator.Send(new SyncBuildingsCommand());
+        return HandleResult(result);
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPut("{id:guid}/floorplan")]
+    public async Task<IActionResult> SetFloorPlan(Guid id, [FromBody] SetBuildingFloorPlanRequest request)
+    {
+        var result = await Mediator.Send(new SetBuildingFloorPlanCommand(id, request.FloorPlanUrl));
+        return HandleResult(result);
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPut("{id:guid}/classroom-positions")]
+    public async Task<IActionResult> UpdateClassroomPositions(Guid id, [FromBody] UpdateClassroomPositionsRequest request)
+    {
+        var result = await Mediator.Send(new UpdateClassroomPositionsCommand(id, request.Positions));
         return HandleResult(result);
     }
 }

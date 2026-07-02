@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, Search, RefreshCw } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, RefreshCw, Map } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/Input';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/Table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from '@/components/ui/Dialog';
 import { TableSkeleton } from '@/components/ui/Skeleton';
+import BuildingFloorPlanTab from '@/components/admin/BuildingFloorPlanTab';
 import type { Building } from '@/types';
 
 const buildingSchema = z.object({
@@ -24,6 +25,8 @@ type BuildingFormData = z.infer<typeof buildingSchema>;
 export default function AdminBuildings() {
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [floorPlanOpen, setFloorPlanOpen] = useState(false);
+  const [floorPlanBuilding, setFloorPlanBuilding] = useState<Building | null>(null);
   const [editing, setEditing] = useState<Building | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [syncResult, setSyncResult] = useState<{ creados: number; existentes: number } | null>(null);
@@ -149,6 +152,16 @@ export default function AdminBuildings() {
                   <TableCell className="text-primary-500">{b.floors}</TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-1">
+                      <button
+                        className="p-1.5 rounded-md text-primary-500 hover:bg-primary-50"
+                        title="Plano del edificio"
+                        onClick={() => {
+                          setFloorPlanBuilding(b);
+                          setFloorPlanOpen(true);
+                        }}
+                      >
+                        <Map className="h-4 w-4" />
+                      </button>
                       <button className="p-1.5 rounded-md text-primary-500 hover:bg-primary-50" onClick={() => openDialog(b)}>
                         <Pencil className="h-4 w-4" />
                       </button>
@@ -164,6 +177,7 @@ export default function AdminBuildings() {
         </div>
       )}
 
+      {/* Edit dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -187,6 +201,22 @@ export default function AdminBuildings() {
         </DialogContent>
       </Dialog>
 
+      {/* Floor plan dialog */}
+      <Dialog open={floorPlanOpen} onOpenChange={setFloorPlanOpen}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Plano - {floorPlanBuilding?.name}</DialogTitle>
+            <DialogDescription>
+              Subí el plano del edificio y colocá las aulas sobre él
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody>
+            {floorPlanBuilding && <BuildingFloorPlanTab building={floorPlanBuilding} />}
+          </DialogBody>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation */}
       <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
         <DialogContent>
           <DialogHeader>

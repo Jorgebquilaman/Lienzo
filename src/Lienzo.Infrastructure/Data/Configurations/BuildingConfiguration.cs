@@ -29,6 +29,10 @@ public class BuildingConfiguration : IEntityTypeConfiguration<Building>
         builder.Property(e => e.CodigoExterno)
             .HasColumnName("codigo_externo");
 
+        builder.Property(e => e.FloorPlanUrl)
+            .HasColumnName("url_plano")
+            .HasMaxLength(500);
+
         builder.Property(e => e.IsActive)
             .HasColumnName("activo")
             .IsRequired();

@@ -45,6 +45,7 @@ export interface Building {
   address?: string;
   floors: number;
   codigoExterno?: number;
+  floorPlanUrl?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -61,6 +62,8 @@ export interface Classroom {
   description?: string;
   features: string[];
   imageUrl?: string;
+  mapPositionX?: number;
+  mapPositionY?: number;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

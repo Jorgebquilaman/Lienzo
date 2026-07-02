@@ -17,6 +17,8 @@ public class Classroom : BaseEntity
     public List<string> Features { get; private set; } = [];
     public bool IsActive { get; private set; }
     public string? ImageUrl { get; private set; }
+    public float? MapPositionX { get; set; }
+    public float? MapPositionY { get; set; }
     public IReadOnlyCollection<Reservation> Reservations => _reservations.AsReadOnly();
 
     private Classroom() { }
