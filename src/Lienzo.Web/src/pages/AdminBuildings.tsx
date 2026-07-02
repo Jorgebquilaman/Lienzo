@@ -203,7 +203,11 @@ export default function AdminBuildings() {
       </Dialog>
 
       {/* Floor plan dialog */}
-      <Dialog open={floorPlanOpen} onOpenChange={(open) => { setFloorPlanOpen(open); if (!open) setFloorPlanFullScreen(false); }}>
+      <Dialog
+        open={floorPlanOpen}
+        onOpenChange={(open) => { setFloorPlanOpen(open); if (!open) setFloorPlanFullScreen(false); }}
+        containerClassName={floorPlanFullScreen ? '!max-w-none !mx-0' : ''}
+      >
         <DialogContent
           className={
             floorPlanFullScreen
