@@ -17,6 +17,7 @@ public class UnitOfWork : IUnitOfWork
     public IAnnouncementRepository Announcements { get; }
     public INotificationRepository Notifications { get; }
     public IHolidayRepository Holidays { get; }
+    public IRecesoRepository Recesos { get; }
     public IPeriodoRepository Periodos { get; }
     public ICarreraRepository Carreras { get; }
     public IActividadRepository Actividades { get; }
@@ -40,6 +41,7 @@ public class UnitOfWork : IUnitOfWork
         IAnnouncementRepository announcements,
         INotificationRepository notifications,
         IHolidayRepository holidays,
+        IRecesoRepository recesos,
         IPeriodoRepository periodos,
         ICarreraRepository carreras,
         IActividadRepository actividades,
@@ -53,6 +55,7 @@ public class UnitOfWork : IUnitOfWork
         Announcements = announcements;
         Notifications = notifications;
         Holidays = holidays;
+        Recesos = recesos;
         Periodos = periodos;
         Carreras = carreras;
         Actividades = actividades;

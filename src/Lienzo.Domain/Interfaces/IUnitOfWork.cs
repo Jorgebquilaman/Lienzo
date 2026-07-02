@@ -10,6 +10,7 @@ public interface IUnitOfWork : IDisposable
     IAnnouncementRepository Announcements { get; }
     INotificationRepository Notifications { get; }
     IHolidayRepository Holidays { get; }
+    IRecesoRepository Recesos { get; }
     IPeriodoRepository Periodos { get; }
     ICarreraRepository Carreras { get; }
     IActividadRepository Actividades { get; }

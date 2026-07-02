@@ -19,6 +19,7 @@ import AdminClassrooms from '@/pages/AdminClassrooms';
 import AdminBuildings from '@/pages/AdminBuildings';
 import AdminUsers from '@/pages/AdminUsers';
 import AdminHolidays from '@/pages/AdminHolidays';
+import AdminRecesos from '@/pages/AdminRecesos';
 import AdminPeriodos from '@/pages/AdminPeriodos';
 import AdminCarreras from '@/pages/AdminCarreras';
 import AdminActividades from '@/pages/AdminActividades';
@@ -190,13 +191,21 @@ export default function App() {
           }
         />
         <Route
-          path="/admin/holidays"
-          element={
-            <AppShell>
-              <AdminHolidays />
-            </AppShell>
-          }
-        />
+            path="/admin/holidays"
+            element={
+              <AppShell>
+                <AdminHolidays />
+              </AppShell>
+            }
+          />
+          <Route
+            path="/admin/recesos"
+            element={
+              <AppShell>
+                <AdminRecesos />
+              </AppShell>
+            }
+          />
         <Route
           path="/admin/periodos"
           element={

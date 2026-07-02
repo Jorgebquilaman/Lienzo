@@ -60,6 +60,9 @@ public class CreateReservationCommandHandler : IRequestHandler<CreateReservation
 
             if (await _unitOfWork.Holidays.IsHolidayAsync(date))
                 return Result<ReservationDto>.Failure("No se permiten reservas en días feriados", "HOLIDAY");
+
+            if (await _unitOfWork.Recesos.IsRecesoAsync(date))
+                return Result<ReservationDto>.Failure("No se permiten reservas en días de receso académico", "RECESS");
         }
 
         var maintenanceBlocks = await _unitOfWork.MaintenanceBlocks.GetAllAsync();

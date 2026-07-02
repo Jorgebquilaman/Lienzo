@@ -30,6 +30,7 @@ import {
   Globe,
   KeyRound,
   Package,
+  CalendarOff,
   Map as MapIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -62,6 +63,7 @@ const adminNavItems = [
   { path: '/admin/maintenance', label: 'Mantenimiento', icon: Wrench },
   { path: '/admin/surveys', label: 'Encuestas', icon: Star },
   { path: '/admin/holidays', label: 'Feriados', icon: CalendarX2 },
+  { path: '/admin/recesos', label: 'Receso Académico', icon: CalendarOff },
   { path: '/admin/accessories', label: 'Accesorios', icon: Package },
 ];
 

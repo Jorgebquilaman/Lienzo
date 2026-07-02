@@ -96,6 +96,7 @@ public static class DependencyInjection
         services.AddScoped<IAnnouncementRepository, AnnouncementRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<IHolidayRepository, HolidayRepository>();
+        services.AddScoped<IRecesoRepository, RecesoRepository>();
         services.AddScoped<IPeriodoRepository, PeriodoRepository>();
         services.AddScoped<ICarreraRepository, CarreraRepository>();
         services.AddScoped<IActividadRepository, ActividadRepository>();

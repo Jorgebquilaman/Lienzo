@@ -159,6 +159,13 @@ export default function SchedulePage() {
   const holidays = holidaysResponse || [];
   const isUserHoliday = holidays.find((h) => h.date === dateStr);
 
+  const { data: recesosResponse } = useQuery({
+    queryKey: ['recesos'],
+    queryFn: () => api.get<{ id: string; startDate: string; endDate: string; description: string }[]>('/recesos'),
+  });
+  const recesos = recesosResponse || [];
+  const isReceso = recesos.find((r) => dateStr >= r.startDate && dateStr <= r.endDate);
+
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const user = useAuthStore((s) => s.user);
   const [movingReservation, setMovingReservation] = useState(false);
@@ -436,6 +443,12 @@ export default function SchedulePage() {
               <CalendarDays className="h-12 w-12 mb-3" />
               <p className="font-medium">{isUserHoliday.description} — Feriado</p>
               <p className="text-sm mt-1">No se realizan reservas en días feriados</p>
+            </div>
+          ) : isReceso ? (
+            <div className="flex flex-col items-center justify-center py-16 text-primary-400">
+              <CalendarDays className="h-12 w-12 mb-3" />
+              <p className="font-medium">{isReceso.description} — Receso Académico</p>
+              <p className="text-sm mt-1">No se realizan reservas en períodos de receso académico</p>
             </div>
           ) : isLoading ? (
             <div className="p-4 space-y-2">

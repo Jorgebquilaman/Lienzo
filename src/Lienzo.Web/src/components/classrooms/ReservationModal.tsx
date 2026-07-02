@@ -137,6 +137,16 @@ export function ReservationModal({ open, onOpenChange, classroom, reservation, o
   });
   const holidays = holidaysResponse || [];
 
+  const { data: recesosResponse } = useQuery({
+    queryKey: ['recesos'],
+    queryFn: () => api.get<{ id: string; startDate: string; endDate: string; description: string }[]>('/recesos'),
+    enabled: open,
+  });
+  const recesos = recesosResponse || [];
+
+  const isDateInReceso = (date: string) =>
+    recesos.some((r) => date >= r.startDate && date <= r.endDate);
+
   const { data: actividadesRes } = useQuery({
     queryKey: ['actividades'],
     queryFn: () => api.get<{ id: string; nombre: string; codigoMateria: string; periodoNombre?: string; carreraNombre?: string }[]>('/actividades'),
@@ -235,6 +245,10 @@ export function ReservationModal({ open, onOpenChange, classroom, reservation, o
         setConflict({ hasConflict: true });
         return;
       }
+      if (isDateInReceso(formData.date)) {
+        setConflict({ hasConflict: true });
+        return;
+      }
       if (!conflict) {
         await checkConflict();
       }
@@ -295,6 +309,9 @@ export function ReservationModal({ open, onOpenChange, classroom, reservation, o
             )}
             {watchDate && holidays.find((h) => h.date === watchDate) && (
               <p className="text-xs text-red-500 -mt-2">No se permiten reservas en días feriados</p>
+            )}
+            {watchDate && isDateInReceso(watchDate) && (
+              <p className="text-xs text-red-500 -mt-2">No se permiten reservas en períodos de receso académico</p>
             )}
 
             <div className="grid grid-cols-2 gap-3">

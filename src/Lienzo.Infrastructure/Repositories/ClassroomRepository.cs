@@ -9,10 +9,12 @@ namespace Lienzo.Infrastructure.Repositories;
 public class ClassroomRepository : GenericRepository<Classroom>, IClassroomRepository
 {
     private readonly IHolidayRepository _holidayRepository;
+    private readonly IRecesoRepository _recesoRepository;
 
-    public ClassroomRepository(LienzoDbContext context, IHolidayRepository holidayRepository) : base(context)
+    public ClassroomRepository(LienzoDbContext context, IHolidayRepository holidayRepository, IRecesoRepository recesoRepository) : base(context)
     {
         _holidayRepository = holidayRepository;
+        _recesoRepository = recesoRepository;
     }
 
     public override async Task<IEnumerable<Classroom>> GetAllAsync()
@@ -51,6 +53,9 @@ public class ClassroomRepository : GenericRepository<Classroom>, IClassroomRepos
             return [];
 
         if (await _holidayRepository.IsHolidayAsync(dateOnly))
+            return [];
+
+        if (await _recesoRepository.IsRecesoAsync(dateOnly))
             return [];
 
         var classrooms = await query.ToListAsync();

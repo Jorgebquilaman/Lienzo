@@ -62,6 +62,9 @@ public class GetAllClassroomsQueryHandler : IRequestHandler<GetAllClassroomsQuer
             if (await _unitOfWork.Holidays.IsHolidayAsync(dateOnly))
                 return Result<List<ClassroomDto>>.Success([]);
 
+            if (await _unitOfWork.Recesos.IsRecesoAsync(dateOnly))
+                return Result<List<ClassroomDto>>.Success([]);
+
             var timeRange = new Lienzo.Domain.ValueObjects.TimeRange(query.StartTime.Value, query.EndTime.Value);
 
             classrooms = classrooms.Where(c =>
