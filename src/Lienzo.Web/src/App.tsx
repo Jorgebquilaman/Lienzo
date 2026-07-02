@@ -11,6 +11,7 @@ import ResetPasswordPage from '@/pages/ResetPasswordPage';
 import DashboardPage from '@/pages/DashboardPage';
 import ClassroomBrowser from '@/pages/ClassroomBrowser';
 import ClassroomDetail from '@/pages/ClassroomDetail';
+import CampusMap from '@/components/campus/CampusMap';
 import MyReservations from '@/pages/MyReservations';
 import SchedulePage from '@/pages/SchedulePage';
 import AdminReservations from '@/pages/AdminReservations';
@@ -68,6 +69,14 @@ export default function App() {
           element={
             <AppShell>
               <ClassroomBrowser />
+            </AppShell>
+          }
+        />
+        <Route
+          path="/mapa"
+          element={
+            <AppShell>
+              <CampusMap />
             </AppShell>
           }
         />

@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Upload, Search, Save, MapPin, X } from 'lucide-react';
 import { api } from '@/lib/api';
+import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import type { Building, Classroom } from '@/types';
@@ -48,9 +49,7 @@ export default function BuildingFloorPlanTab({ building }: Props) {
     mutationFn: async (file: File) => {
       const fd = new FormData();
       fd.append('file', file);
-      const token = localStorage.getItem('auth-storage')
-        ? JSON.parse(localStorage.getItem('auth-storage')!).state?.token
-        : null;
+      const token = useAuthStore.getState().token;
       const res = await fetch('/api/upload/floorplan', {
         method: 'POST',
         headers: token ? { Authorization: `Bearer ${token}` } : {},

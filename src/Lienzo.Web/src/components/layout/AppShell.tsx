@@ -30,6 +30,7 @@ import {
   Globe,
   KeyRound,
   Package,
+  Map as MapIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
@@ -43,6 +44,7 @@ import { NotificationPanel } from '@/components/notifications/NotificationPanel'
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/classrooms', label: 'Aulas', icon: DoorOpen },
+  { path: '/mapa', label: 'Mapa', icon: MapIcon },
   { path: '/reservations', label: 'Reservaciones', icon: CalendarCheck },
   { path: '/schedule', label: 'Horario', icon: CalendarDays },
   { path: '/asistencias', label: 'Asistencias', icon: ClipboardCheck },
