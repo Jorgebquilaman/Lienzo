@@ -9,7 +9,6 @@ export default function ForgotPasswordPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
-  const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -18,18 +17,13 @@ export default function ForgotPasswordPage() {
     setLoading(true);
     setError('');
     try {
-      const result = await api.post<string>('/auth/forgot-password', { email });
-      setCode(result);
+      await api.post('/auth/forgot-password', { email });
       setSent(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al enviar solicitud');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleResetNavigate = () => {
-    navigate(`/reset-password?email=${encodeURIComponent(email)}&code=${code}`);
   };
 
   return (
@@ -48,7 +42,19 @@ export default function ForgotPasswordPage() {
               <Palette className="h-8 w-8 text-accent-500" />
             </div>
             <h1 className="font-heading text-3xl font-bold text-primary-800">Recuperar Contraseña</h1>
-            <p className="text-primary-500 text-sm mt-1">Ingresa tu correo para recibir un código</p>
+            <p className="text-primary-500 text-sm mt-1">Ingresa tu correo para recibir un enlace</p>
+          </div>
+
+          <div className="bg-accent-50 border border-accent-200 rounded-lg p-3 text-xs text-primary-600 space-y-2 mb-6">
+            <p>
+              <strong>Docentes:</strong> usá tu correo institucional <span className="font-mono text-accent-700">@iupa.edu.ar</span>
+            </p>
+            <p>
+              <strong>Estudiantes:</strong> usá el correo con el que te registraste en Guaraní
+            </p>
+            <p className="text-primary-400 pt-1 border-t border-accent-200">
+              Si no podés acceder, escribí a <a href="mailto:soporte@iupa.edu.ar" className="text-accent-600 font-medium hover:underline">soporte@iupa.edu.ar</a>
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -69,20 +75,15 @@ export default function ForgotPasswordPage() {
 
             {sent && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-sm text-green-700 space-y-2">
-                <p className="font-medium">Código de recuperación generado:</p>
-                <p className="text-2xl font-bold text-center tracking-widest">{code}</p>
-                <p className="text-xs text-green-600">Este código expira en 15 minutos. En producción se enviaría por correo.</p>
+                <p className="font-medium">Si el correo existe, recibirás un enlace de recuperación.</p>
+                <p className="text-xs text-green-600">Revisá tu bandeja de entrada y seguí las instrucciones. El enlace expira en 24 horas.</p>
               </div>
             )}
 
-            {sent ? (
-              <Button type="button" className="w-full h-11" onClick={handleResetNavigate}>
-                Restablecer contraseña
-              </Button>
-            ) : (
+            {sent ? null : (
               <Button type="submit" className="w-full h-11" loading={loading}>
                 <Mail className="h-4 w-4 mr-2" />
-                Enviar código
+                Enviar enlace
               </Button>
             )}
           </form>

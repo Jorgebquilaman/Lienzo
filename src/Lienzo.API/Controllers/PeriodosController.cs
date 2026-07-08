@@ -2,6 +2,7 @@ using Lienzo.Application.Commands.CreatePeriodo;
 using Lienzo.Application.Commands.DeletePeriodo;
 using Lienzo.Application.Commands.SyncPeriodos;
 using Lienzo.Application.Commands.SyncTiposPeriodo;
+using Lienzo.Application.Commands.TogglePeriodoActive;
 using Lienzo.Application.DTOs;
 using Lienzo.Application.Queries.GetAllPeriodos;
 using Microsoft.AspNetCore.Authorization;
@@ -44,6 +45,13 @@ public class PeriodosController : BaseApiController
     public async Task<IActionResult> Sync([FromQuery] short anioAcademico = 2026)
     {
         var result = await Mediator.Send(new SyncPeriodosCommand(anioAcademico));
+        return HandleResult(result);
+    }
+
+    [HttpPatch("{id:guid}/toggle-active")]
+    public async Task<IActionResult> ToggleActive(Guid id)
+    {
+        var result = await Mediator.Send(new TogglePeriodoActiveCommand(id));
         return HandleResult(result);
     }
 }

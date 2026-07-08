@@ -3,7 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { useSignalR } from '@/hooks/useSignalR';
 import { AppShell } from '@/components/layout/AppShell';
-import { ProtectedRoute, AdminRoute } from '@/components/layout/ProtectedRoute';
+import { ProtectedRoute, AdminRoute, SuperAdminRoute } from '@/components/layout/ProtectedRoute';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
@@ -182,14 +182,48 @@ export default function App() {
             </AppShell>
           }
         />
-        <Route
-          path="/admin/users"
-          element={
-            <AppShell>
-              <AdminUsers />
-            </AppShell>
-          }
-        />
+        <Route element={<SuperAdminRoute />}>
+          <Route
+            path="/admin/users"
+            element={
+              <AppShell>
+                <AdminUsers />
+              </AppShell>
+            }
+          />
+          <Route
+            path="/admin/periodos"
+            element={
+              <AppShell>
+                <AdminPeriodos />
+              </AppShell>
+            }
+          />
+          <Route
+            path="/admin/carreras"
+            element={
+              <AppShell>
+                <AdminCarreras />
+              </AppShell>
+            }
+          />
+          <Route
+            path="/admin/actividades"
+            element={
+              <AppShell>
+                <AdminActividades />
+              </AppShell>
+            }
+          />
+          <Route
+            path="/admin/settings"
+            element={
+              <AppShell>
+                <AdminSettings />
+              </AppShell>
+            }
+          />
+        </Route>
         <Route
             path="/admin/holidays"
             element={
@@ -206,30 +240,6 @@ export default function App() {
               </AppShell>
             }
           />
-        <Route
-          path="/admin/periodos"
-          element={
-            <AppShell>
-              <AdminPeriodos />
-            </AppShell>
-          }
-        />
-        <Route
-          path="/admin/carreras"
-          element={
-            <AppShell>
-              <AdminCarreras />
-            </AppShell>
-          }
-        />
-        <Route
-          path="/admin/actividades"
-          element={
-            <AppShell>
-              <AdminActividades />
-            </AppShell>
-          }
-        />
         <Route
           path="/admin/reports"
           element={
@@ -251,14 +261,6 @@ export default function App() {
           element={
             <AppShell>
               <AdminSurveys />
-            </AppShell>
-          }
-        />
-        <Route
-          path="/admin/settings"
-          element={
-            <AppShell>
-              <AdminSettings />
             </AppShell>
           }
         />

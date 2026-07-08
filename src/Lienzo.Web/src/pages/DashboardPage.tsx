@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
-import { Link, useNavigate } from 'react-router-dom';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import {
   DoorOpen,
   CalendarCheck,
@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   CheckCircle,
   XCircle,
+  ClipboardCheck,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
@@ -20,6 +21,16 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { useAuthStore } from '@/stores/authStore';
 import { getStatusLabel } from '@/lib/utils';
 import type { DashboardStats, Reservation, Announcement, PaginatedResponse } from '@/types';
+
+interface MisPendiente {
+  claseId: string;
+  actividadNombre: string;
+  classroomName: string;
+  fecha: string;
+  horaInicio: string;
+  horaFin: string;
+  docenteNombre: string;
+}
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
@@ -40,10 +51,16 @@ export default function DashboardPage() {
 
   const { data: upcomingResponse } = useQuery({
     queryKey: ['upcomingReservations'],
-    queryFn: () => api.get<PaginatedResponse<Reservation>>('/reservations?pageSize=10'),
+    queryFn: () => api.get<PaginatedResponse<Reservation>>('/reservations?filter=upcoming&pageSize=10'),
     enabled: user?.role === 'Teacher' || user?.role === 'Student',
   });
   const upcomingReservations = upcomingResponse?.value;
+
+  const { data: pendientes } = useQuery({
+    queryKey: ['misPendientes'],
+    queryFn: () => api.get<MisPendiente[]>('/asistencia/mis-pendientes'),
+    enabled: user?.role === 'Student',
+  });
 
   const { data: announcements } = useQuery({
     queryKey: ['recentAnnouncements'],
@@ -58,7 +75,7 @@ export default function DashboardPage() {
     return <TeacherDashboard upcoming={upcomingReservations} announcements={announcements} />;
   }
 
-  return <StudentDashboard upcoming={upcomingReservations} announcements={announcements} />;
+  return <StudentDashboard upcoming={upcomingReservations} announcements={announcements} pendientes={pendientes} />;
 }
 
 function AdminDashboard({
@@ -182,6 +199,32 @@ function AdminDashboard({
   );
 }
 
+function CheckInButton({ reservationId }: { reservationId: string }) {
+  const navigate = useNavigate();
+  const checkinMutation = useMutation({
+    mutationFn: (id: string) => api.post('/asistencia/checkin', { reservationId: id }),
+    onSuccess: (data: any) => {
+      navigate(`/asistencia/${data.claseId}`);
+    },
+    onError: (err: any) => {
+      alert(err?.message || 'Error al iniciar check-in');
+    },
+  });
+
+  return (
+    <Button
+      variant="accent"
+      size="sm"
+      className="w-full"
+      onClick={() => checkinMutation.mutate(reservationId)}
+      disabled={checkinMutation.isPending}
+    >
+      <ClipboardCheck className="h-3.5 w-3.5 mr-1" />
+      {checkinMutation.isPending ? 'Iniciando...' : 'Habilitar Asistencia'}
+    </Button>
+  );
+}
+
 function TeacherDashboard({
   upcoming,
   announcements,
@@ -198,46 +241,78 @@ function TeacherDashboard({
         <p className="text-primary-500 mt-1">Gestiona tus clases y aulas</p>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg">Próximas Reservaciones</CardTitle>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/reservations')}>
-              Ver todas
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {!upcoming ? (
-              <div className="space-y-2">{[1, 2].map((i) => <Skeleton key={i} className="h-14 w-full" />)}</div>
-            ) : upcoming.length === 0 ? (
-              <div className="text-center py-8">
-                <CalendarCheck className="h-10 w-10 text-primary-200 mx-auto mb-2" />
-                <p className="text-sm text-primary-400">No tienes reservaciones próximas</p>
-                <Button variant="outline" size="sm" className="mt-3" onClick={() => navigate('/classrooms')}>
-                  Explorar aulas
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {upcoming.slice(0, 5).map((r) => (
-                  <div key={r.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-primary-50">
-                    <div>
-                      <p className="text-sm font-medium text-primary-800">{r.title}</p>
-                      <p className="text-xs text-primary-400">{r.classroomName} · {r.date} {r.startTime}-{r.endTime}</p>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-lg">Próximas Clases</CardTitle>
+          <Button variant="ghost" size="sm" onClick={() => navigate('/schedule')}>
+            Ver horario
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {!upcoming ? (
+            <div className="space-y-2">{[1, 2].map((i) => <Skeleton key={i} className="h-14 w-full" />)}</div>
+          ) : upcoming.length === 0 ? (
+            <div className="text-center py-8">
+              <CalendarCheck className="h-10 w-10 text-primary-200 mx-auto mb-2" />
+              <p className="text-sm text-primary-400">No tienes clases próximas</p>
+              <Button variant="outline" size="sm" className="mt-3" onClick={() => navigate('/schedule')}>
+                Ir al horario
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {upcoming.slice(0, 5).map((r) => (
+                <div key={r.id} className="p-2 rounded-lg hover:bg-primary-50 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-primary-800 break-words">{r.actividadNombre || r.title}</p>
+                      <p className="text-xs text-primary-400">
+                        {r.classroomName} · {r.date.split('T')[0].split('-').reverse().join('/')} {r.startTime.slice(0, 5)}-{r.endTime.slice(0, 5)}
+                      </p>
+                      {r.actividadDocentes && (
+                        <p className="text-xs text-primary-400 truncate">{r.actividadDocentes}</p>
+                      )}
                     </div>
-                    <Badge variant={r.status.toLowerCase() as any}>{getStatusLabel(r.status)}</Badge>
+                    {r.status !== 'Approved' && (
+                      <Badge variant={r.status.toLowerCase() as any}>{getStatusLabel(r.status)}</Badge>
+                    )}
+                  </div>
+                  {r.status === 'Approved' && (
+                    <CheckInButton reservationId={r.id} />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Acciones Rápidas</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-primary-500 uppercase tracking-wider">Tus Reservaciones</p>
+            {!upcoming ? (
+              <div className="space-y-2">{[1, 2].map((i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
+            ) : upcoming.length === 0 ? (
+              <p className="text-sm text-primary-400">Sin reservaciones</p>
+            ) : (
+              <div className="space-y-1">
+                {upcoming.slice(0, 5).map((r) => (
+                  <div key={r.id} className="flex items-center justify-between gap-2 py-1.5">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm text-primary-700 truncate">{r.actividadNombre || r.title}</p>
+                      <p className="text-xs text-primary-400">{r.date.split('T')[0].split('-').reverse().join('/')} {r.startTime.slice(0, 5)}-{r.endTime.slice(0, 5)}</p>
+                    </div>
+                    <Badge variant={r.status.toLowerCase() as any} className="shrink-0">{getStatusLabel(r.status)}</Badge>
                   </div>
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Acciones Rápidas</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
+          </div>
+          <div className="border-t border-primary-100 pt-3 space-y-3">
             <Button variant="accent" className="w-full justify-start" onClick={() => navigate('/announcements')}>
               <Megaphone className="h-4 w-4 mr-2" />
               Enviar Anuncio
@@ -246,9 +321,9 @@ function TeacherDashboard({
               <DoorOpen className="h-4 w-4 mr-2" />
               Explorar Aulas
             </Button>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {announcements && announcements.length > 0 && (
         <Card>
@@ -272,9 +347,11 @@ function TeacherDashboard({
 function StudentDashboard({
   upcoming,
   announcements,
+  pendientes,
 }: {
   upcoming?: Reservation[];
   announcements?: Announcement[];
+  pendientes?: MisPendiente[];
 }) {
   const navigate = useNavigate();
   const unreadAnnouncements = announcements?.filter((a) => !a.isRead) || [];
@@ -304,6 +381,50 @@ function StudentDashboard({
           </div>
         </div>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <ClipboardCheck className="h-5 w-5" />
+            Asistencias Pendientes
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!pendientes ? (
+            <div className="space-y-2">{[1, 2].map((i) => <Skeleton key={i} className="h-14 w-full" />)}</div>
+          ) : pendientes.length === 0 ? (
+            <div className="text-center py-6">
+              <CheckCircle className="h-10 w-10 text-green-200 mx-auto mb-2" />
+              <p className="text-sm text-primary-400">No tienes asistencias pendientes</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {pendientes.map((p) => (
+                <div key={p.claseId} className="p-2 rounded-lg hover:bg-primary-50 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-primary-800 break-words">{p.actividadNombre}</p>
+                      <p className="text-xs text-primary-400">
+                        {p.classroomName} · {p.fecha.split('-').reverse().join('/')} {p.horaInicio.slice(0, 5)}-{p.horaFin.slice(0, 5)}
+                      </p>
+                      <p className="text-xs text-primary-400">{p.docenteNombre}</p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="accent"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => navigate(`/asistencia/marcar?claseId=${p.claseId}`)}
+                  >
+                    <ClipboardCheck className="h-3.5 w-3.5 mr-1" />
+                    Marcar Asistencia
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">

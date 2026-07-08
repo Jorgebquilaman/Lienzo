@@ -189,10 +189,11 @@ public class SyncActividadService : ISyncActividadService
                 docenteMap[cid] = [];
 
             await using var dCmd = new NpgsqlCommand(
-                @"SELECT dc.comision, p.apellido, p.nombres
+                @"SELECT dc.comision, p.apellido, p.nombres, mpc.email
                   FROM negocio.sga_docentes_comision dc
                   JOIN negocio.sga_docentes d ON d.docente = dc.docente
                   JOIN negocio.mdp_personas p ON p.persona = d.persona
+                  JOIN negocio.mdp_personas_contactos mpc ON mpc.persona = d.persona AND mpc.contacto_tipo = 'MI'
                   JOIN negocio.sga_comisiones c ON c.comision = dc.comision AND c.estado = 'A'
                   JOIN negocio.sga_periodos_lectivos pl ON pl.periodo_lectivo = c.periodo_lectivo
                   JOIN negocio.sga_periodos pe ON pe.periodo = pl.periodo AND pe.anio_academico = @anio
@@ -203,14 +204,20 @@ public class SyncActividadService : ISyncActividadService
             dCmd.Parameters.AddWithValue("anio", anioAcademico);
 
             await using var dr = await dCmd.ExecuteReaderAsync();
+            var globalEmailMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             while (await dr.ReadAsync())
             {
                 var comisionId = dr.GetInt32(0);
                 var apellido = dr.IsDBNull(1) ? "" : dr.GetString(1).Trim();
                 var nombres = dr.IsDBNull(2) ? "" : dr.GetString(2).Trim();
                 var fullName = $"{nombres} {apellido}".Trim();
+                var email = dr.IsDBNull(3) ? null : dr.GetString(3).Trim();
                 if (!string.IsNullOrWhiteSpace(fullName) && docenteMap.ContainsKey(comisionId))
+                {
                     docenteMap[comisionId].Add(fullName);
+                    if (!string.IsNullOrWhiteSpace(email) && !globalEmailMap.ContainsKey(fullName))
+                        globalEmailMap[fullName] = email;
+                }
             }
             await dr.CloseAsync();
 
@@ -218,6 +225,13 @@ public class SyncActividadService : ISyncActividadService
             var itemsWithDocentes = new List<ExternalActividadInfo>();
             foreach (var item in items)
             {
+                var docentes = docenteMap.GetValueOrDefault(item.Comision) ?? [];
+                var emails = new Dictionary<string, string>();
+                foreach (var name in docentes)
+                {
+                    if (globalEmailMap.TryGetValue(name, out var email))
+                        emails[name] = email;
+                }
                 itemsWithDocentes.Add(new ExternalActividadInfo
                 {
                     Comision = item.Comision,
@@ -229,7 +243,8 @@ public class SyncActividadService : ISyncActividadService
                     Edificacion = item.Edificacion,
                     PropuestaId = item.PropuestaId,
                     PropuestaCodigo = item.PropuestaCodigo,
-                    DocenteNames = docenteMap.GetValueOrDefault(item.Comision) ?? [],
+                    DocenteNames = docentes,
+                    DocenteEmails = emails,
                     DiaSemana = item.DiaSemana,
                     HoraInicio = item.HoraInicio,
                     HoraFin = item.HoraFin,

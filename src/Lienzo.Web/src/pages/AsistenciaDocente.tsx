@@ -186,6 +186,23 @@ export default function AsistenciaDocente() {
         </div>
       </div>
 
+      <div ref={qrContainerRef} className="bg-white rounded-xl border border-primary-100 p-4 text-center lg:hidden">
+        <h3 className="font-semibold text-primary-800 mb-3 flex items-center justify-center gap-1.5">
+          <QrCode className="h-4 w-4" /> Código QR
+        </h3>
+        {qrData?.url && (
+          <div
+            className="flex justify-center mb-3 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => setFullscreenQr(true)}
+          >
+            <QRCodeSVG value={qrData.url} size={160} />
+          </div>
+        )}
+        <p className="text-xs text-primary-400">
+          Tocá el QR para verlo en pantalla completa
+        </p>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
           <div className="bg-white rounded-xl border border-primary-100 p-4">
@@ -220,10 +237,6 @@ export default function AsistenciaDocente() {
                     </Button>
                   </>
                 )}
-                <Button variant="outline" size="sm" onClick={exportPdf}>
-                  <FileDown className="h-4 w-4 mr-1" />
-                  PDF
-                </Button>
                 {syncMutation.isPending && <span className="text-sm text-primary-400 animate-pulse">Sincronizando...</span>}
                 {syncMutation.isSuccess && (
                   <span className="text-sm text-green-600">
@@ -290,7 +303,7 @@ export default function AsistenciaDocente() {
         </div>
 
         <div className="space-y-4">
-          <div ref={qrContainerRef} className="bg-white rounded-xl border border-primary-100 p-4 text-center">
+          <div className="bg-white rounded-xl border border-primary-100 p-4 text-center hidden lg:block">
             <h3 className="font-semibold text-primary-800 mb-3 flex items-center justify-center gap-1.5">
               <QrCode className="h-4 w-4" /> Código QR
             </h3>
@@ -326,6 +339,10 @@ export default function AsistenciaDocente() {
           </div>
         </div>
       </div>
+
+      <Button variant="outline" size="sm" className="w-full" onClick={exportPdf}>
+        <FileDown className="h-4 w-4 mr-1" /> Exportar PDF
+      </Button>
 
       {fullscreenQr && qrData?.url && (
         <div

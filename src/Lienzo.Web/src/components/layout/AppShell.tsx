@@ -31,7 +31,6 @@ import {
   KeyRound,
   Package,
   CalendarOff,
-  Map as MapIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
@@ -45,7 +44,6 @@ import { NotificationPanel } from '@/components/notifications/NotificationPanel'
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/classrooms', label: 'Aulas', icon: DoorOpen },
-  { path: '/mapa', label: 'Mapa', icon: MapIcon },
   { path: '/reservations', label: 'Reservaciones', icon: CalendarCheck },
   { path: '/schedule', label: 'Horario', icon: CalendarDays },
   { path: '/asistencias', label: 'Asistencias', icon: ClipboardCheck },
@@ -53,19 +51,7 @@ const navItems = [
   { path: '/surveys', label: 'Mis Encuestas', icon: Star },
 ];
 
-const adminNavItems = [
-  { path: '/admin/reservations', label: 'Reservaciones', icon: CalendarCheck },
-  { path: '/admin/classrooms', label: 'Aulas', icon: DoorOpen },
-  { path: '/admin/buildings', label: 'Edificios', icon: Building2 },
-  { path: '/admin/bedelia', label: 'Bedelía', icon: KeyRound },
-  { path: '/admin/reports', label: 'Reportes', icon: BarChart3 },
-  { path: '/admin/settings', label: 'Configuración', icon: Globe },
-  { path: '/admin/maintenance', label: 'Mantenimiento', icon: Wrench },
-  { path: '/admin/surveys', label: 'Encuestas', icon: Star },
-  { path: '/admin/holidays', label: 'Feriados', icon: CalendarX2 },
-  { path: '/admin/recesos', label: 'Receso Académico', icon: CalendarOff },
-  { path: '/admin/accessories', label: 'Accesorios', icon: Package },
-];
+const isSuperAdmin = (user: { email?: string } | null) => user?.email === 'admin@lienzo.edu';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -198,7 +184,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
           <nav className="space-y-1">
-            {adminNavItems.map((item) => (
+            {[
+              { path: '/admin/reservations', label: 'Reservaciones', icon: CalendarCheck },
+              { path: '/admin/classrooms', label: 'Aulas', icon: DoorOpen },
+              { path: '/admin/buildings', label: 'Edificios', icon: Building2 },
+              { path: '/admin/bedelia', label: 'Bedelía', icon: KeyRound },
+              { path: '/admin/reports', label: 'Reportes', icon: BarChart3 },
+              ...(isSuperAdmin(user) ? [{ path: '/admin/settings', label: 'Configuración', icon: Globe }] : []),
+              { path: '/admin/maintenance', label: 'Mantenimiento', icon: Wrench },
+              { path: '/admin/surveys', label: 'Encuestas', icon: Star },
+              { path: '/admin/holidays', label: 'Feriados', icon: CalendarX2 },
+              { path: '/admin/recesos', label: 'Receso Académico', icon: CalendarOff },
+              { path: '/admin/accessories', label: 'Accesorios', icon: Package },
+            ].map((item) => (
               <Link
                 key={item.path}
                 to={item.path}
@@ -216,7 +214,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             ))}
           </nav>
 
-          <AcademicSection isActive={isActive} collapsed={sidebarCollapsed} />
+          {isSuperAdmin(user) && <AcademicSection isActive={isActive} collapsed={sidebarCollapsed} />}
         </div>
       )}
 
@@ -238,14 +236,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               key={item.path}
               to={item.path}
               className={cn(
-                'flex flex-col items-center justify-center gap-0.5 px-3 py-1 rounded-lg text-[10px] font-medium transition-colors min-h-[44px] min-w-[44px]',
+                'flex flex-col items-center justify-center px-3 py-1 rounded-lg font-medium transition-colors min-h-[44px] min-w-[44px]',
                 isActive(item.path)
                   ? 'text-accent-600'
                   : 'text-primary-400 hover:text-primary-600'
               )}
             >
-              <item.icon className="h-5 w-5" />
-              {item.label}
+              <item.icon className="h-6 w-6" />
             </Link>
           ))}
         </div>

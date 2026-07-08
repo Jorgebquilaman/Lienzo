@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { Card, CardContent } from '@/components/ui/Card';
 import { useAuthStore } from '@/stores/authStore';
-import { CalendarDays, Clock, MapPin, Users, BookOpen, FileDown, FileSpreadsheet, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarDays, Clock, MapPin, Users, BookOpen, FileDown, FileSpreadsheet, ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
@@ -113,43 +113,40 @@ export default function AsistenciasList() {
 
   return (
     <div className="space-y-6">
+      <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm text-primary-500 hover:text-primary-700 transition-colors sm:hidden mb-2">
+        <ArrowLeft className="h-4 w-4" /> Volver
+      </button>
       <div className="flex items-center justify-between">
         <h1 className="font-heading text-2xl font-bold text-primary-800">Asistencias</h1>
       </div>
 
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-wrap items-end gap-3 mb-6">
-            <div className="w-40">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3 mb-6">
+            <div className="w-full sm:w-40">
               <Input label="Desde" type="date" value={desde} onChange={(e) => { setDesde(e.target.value); setPage(1); }} />
             </div>
-            <div className="w-40">
+            <div className="w-full sm:w-40">
               <Input label="Hasta" type="date" value={hasta} onChange={(e) => { setHasta(e.target.value); setPage(1); }} />
             </div>
-            <div>
+            <div className="w-full sm:w-auto">
               <label className="block text-sm font-medium text-primary-700 mb-1">Estado</label>
               <select
                 value={estado}
                 onChange={(e) => { setEstado(e.target.value); setPage(1); }}
-                className="h-10 rounded-lg border border-primary-200 bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                className="w-full h-10 rounded-lg border border-primary-200 bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
               >
                 <option value="">Todos</option>
                 <option value="Abierta">Abierta</option>
                 <option value="Cerrada">Cerrada</option>
               </select>
             </div>
-            {(desde || hasta) && (
-              <Button variant="ghost" size="sm" onClick={() => { setDesde(''); setHasta(''); setPage(1); }}>
-                Limpiar
-              </Button>
-            )}
-            <div className="flex gap-2 ml-auto">
-              <Button variant="outline" size="sm" onClick={exportPdf}>
-                <FileDown className="h-4 w-4 mr-1" /> PDF
-              </Button>
-              <Button variant="outline" size="sm" onClick={exportExcel}>
-                <FileSpreadsheet className="h-4 w-4 mr-1" /> Excel
-              </Button>
+            <div className="flex gap-2 w-full sm:w-auto">
+              {(desde || hasta) && (
+                <Button variant="ghost" size="sm" onClick={() => { setDesde(''); setHasta(''); setPage(1); }}>
+                  Limpiar
+                </Button>
+              )}
             </div>
           </div>
 
@@ -167,12 +164,12 @@ export default function AsistenciasList() {
                   <thead>
                     <tr className="border-b border-primary-100">
                       <th className="text-left py-3 px-2 font-medium text-primary-500">Actividad</th>
-                      <th className="text-left py-3 px-2 font-medium text-primary-500">Aula</th>
+                      <th className="text-left py-3 px-2 font-medium text-primary-500 hidden sm:table-cell">Aula</th>
                       <th className="text-left py-3 px-2 font-medium text-primary-500">Fecha</th>
-                      <th className="text-left py-3 px-2 font-medium text-primary-500">Horario</th>
-                      <th className="text-center py-3 px-2 font-medium text-primary-500">Alumnos</th>
+                      <th className="text-left py-3 px-2 font-medium text-primary-500 hidden sm:table-cell">Horario</th>
+                      <th className="text-center py-3 px-2 font-medium text-primary-500 hidden sm:table-cell">Alumnos</th>
                       <th className="text-center py-3 px-2 font-medium text-primary-500">Estado</th>
-                      <th className="text-left py-3 px-2 font-medium text-primary-500">Docente</th>
+                      <th className="text-left py-3 px-2 font-medium text-primary-500 hidden sm:table-cell">Docente</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -182,7 +179,7 @@ export default function AsistenciasList() {
                         onClick={() => navigate(`/asistencia/${clase.id}`)}
                       >
                         <td className="py-3 px-2 font-medium text-primary-800">{clase.actividadNombre}</td>
-                        <td className="py-3 px-2 text-primary-600">
+                        <td className="py-3 px-2 text-primary-600 hidden sm:table-cell">
                           <div className="flex items-center gap-1">
                             <MapPin className="h-3.5 w-3.5 text-primary-400" />
                             {clase.classroomName}
@@ -194,13 +191,13 @@ export default function AsistenciasList() {
                             {clase.fecha}
                           </div>
                         </td>
-                        <td className="py-3 px-2 text-primary-600">
+                        <td className="py-3 px-2 text-primary-600 hidden sm:table-cell">
                           <div className="flex items-center gap-1">
                             <Clock className="h-3.5 w-3.5 text-primary-400" />
                             {clase.horaInicio} — {clase.horaFin}
                           </div>
                         </td>
-                        <td className="py-3 px-2 text-center">
+                        <td className="py-3 px-2 text-center hidden sm:table-cell">
                           <div className="flex items-center justify-center gap-1">
                             <Users className="h-3.5 w-3.5 text-primary-400" />
                             <span className={clase.presentes === clase.totalAlumnos ? 'text-green-600 font-medium' : 'text-primary-600'}>
@@ -209,7 +206,7 @@ export default function AsistenciasList() {
                           </div>
                         </td>
                         <td className="py-3 px-2 text-center">{getStatusBadge(clase.estado)}</td>
-                        <td className="py-3 px-2 text-primary-600 text-xs">{clase.docenteNombre}</td>
+                        <td className="py-3 px-2 text-primary-600 text-xs hidden sm:table-cell">{clase.docenteNombre}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -233,6 +230,14 @@ export default function AsistenciasList() {
               )}
             </>
           )}
+          <div className="flex flex-col gap-2 mt-6">
+            <Button variant="outline" size="sm" className="w-full" onClick={exportPdf}>
+              <FileDown className="h-4 w-4 mr-1" /> Exportar PDF
+            </Button>
+            <Button variant="outline" size="sm" className="w-full" onClick={exportExcel}>
+              <FileSpreadsheet className="h-4 w-4 mr-1" /> Exportar Excel
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

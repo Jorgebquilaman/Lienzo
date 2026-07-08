@@ -47,6 +47,20 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowAll");
+app.Use(async (ctx, next) =>
+{
+    ctx.Response.OnStarting(() =>
+    {
+        if (ctx.Request.Path == "/" || ctx.Request.Path == "/index.html")
+        {
+            ctx.Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+            ctx.Response.Headers["Pragma"] = "no-cache";
+            ctx.Response.Headers["Expires"] = "0";
+        }
+        return Task.CompletedTask;
+    });
+    await next();
+});
 app.UseDefaultFiles();
 app.UseStaticFiles();
 app.UseAuthentication();

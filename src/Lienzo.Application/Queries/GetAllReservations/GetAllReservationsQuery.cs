@@ -116,6 +116,7 @@ public class GetAllReservationsQueryHandler : IRequestHandler<GetAllReservations
             dto.ActividadPeriodo = act.Periodo?.Nombre;
             dto.ActividadCarrera = act.Carrera?.Nombre;
             dto.ActividadDocentes = string.Join(", ", act.Docentes.Select(d => userMap.GetValueOrDefault(d.DocenteId, d.DocenteId)).Distinct());
+            dto.ActividadDocenteIds = act.Docentes.Select(d => d.DocenteId).Distinct().ToList();
         }
     }
 }

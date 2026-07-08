@@ -55,6 +55,15 @@ public class CheckInCommandHandler : IRequestHandler<CheckInCommand, Result<Chec
         if (!actividad.CodigoExterno.HasValue)
             return Result<CheckInResult>.Failure("La actividad no tiene código externo (comisión SGA).");
 
+        var currentUserRole = _currentUser.Role;
+        if (currentUserRole != Domain.Enums.UserRole.Admin.ToString())
+        {
+            var isDocente = await _unitOfWork.ActividadDocentes.Query()
+                .AnyAsync(ad => ad.ActividadId == actividad.Id && ad.DocenteId == _currentUser.UserId.ToString(), ct);
+            if (!isDocente)
+                return Result<CheckInResult>.Failure("No eres docente de esta actividad.");
+        }
+
         // Check if already checked in for this reservation
         var existingClases = await _unitOfWork.Clases.Query()
             .Where(c => c.ReservationId == request.ReservationId && !c.IsDeleted)

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { CalendarCheck, XCircle, CheckCircle, Pencil, Repeat, Star, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { CalendarCheck, XCircle, CheckCircle, Pencil, Repeat, Star, ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -21,6 +22,7 @@ const tabs = [
 ];
 
 export default function MyReservations() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('upcoming');
   const [editingReservation, setEditingReservation] = useState<Reservation | null>(null);
   const [surveyReservation, setSurveyReservation] = useState<Reservation | null>(null);
@@ -76,6 +78,9 @@ export default function MyReservations() {
 
   return (
     <div className="space-y-6">
+      <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm text-primary-500 hover:text-primary-700 transition-colors sm:hidden mb-2">
+        <ArrowLeft className="h-4 w-4" /> Volver
+      </button>
       <div>
         <h1 className="font-heading text-2xl font-bold text-primary-800">Mis Reservaciones</h1>
         <p className="text-primary-500 mt-1">Gestiona tus reservaciones de aulas</p>
@@ -183,15 +188,21 @@ export default function MyReservations() {
                               >
                                 <Pencil className="h-4 w-4" />
                               </button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                                onClick={() => cancelMutation.mutate(reservation.id)}
-                                loading={cancelMutation.isPending}
-                              >
-                                <XCircle className="h-4 w-4" />
-                              </Button>
+                              {(isAdmin || reservation.userId === user?.id || reservation.actividadDocenteIds?.includes(user?.id ?? '')) && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                  onClick={() => {
+                                    if (window.confirm('¿Estás seguro de cancelar esta reserva?')) {
+                                      cancelMutation.mutate(reservation.id);
+                                    }
+                                  }}
+                                  loading={cancelMutation.isPending}
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                </Button>
+                              )}
                             </>
                           )}
                         </div>

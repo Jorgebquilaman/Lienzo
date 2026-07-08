@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { BarChart3, TrendingUp, FileText, Users, Clock, CalendarDays, MapPin, User, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { BarChart3, TrendingUp, FileText, Users, Clock, CalendarDays, MapPin, User, CheckCircle2, XCircle, AlertCircle, KeyRound } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -106,6 +106,26 @@ interface ClassroomTimelineResponse {
   totalReservations: number;
 }
 
+interface BedeliaAccessorySummary {
+  name: string;
+  deliveryCount: number;
+}
+
+interface BedeliaClassroomSummary {
+  classroomName: string;
+  buildingName: string | null;
+  deliveryCount: number;
+  activeCount: number;
+}
+
+interface BedeliaReportResponse {
+  totalDeliveries: number;
+  activeDeliveries: number;
+  returnedDeliveries: number;
+  topAccessories: BedeliaAccessorySummary[];
+  byClassroom: BedeliaClassroomSummary[];
+}
+
 const STATUS_LABELS: Record<string, string> = {
   Pending: 'Pendiente',
   Approved: 'Aprobada',
@@ -151,6 +171,7 @@ export default function AdminReports() {
   const [runProposal, setRunProposal] = useState(false);
   const [runCarga, setRunCarga] = useState(false);
   const [runTimeline, setRunTimeline] = useState(false);
+  const [runBedelia, setRunBedelia] = useState(false);
   const [groupBy, setGroupBy] = useState('propuesta');
 
   const { data: usageData, isLoading: usageLoading } = useQuery({
@@ -186,6 +207,17 @@ export default function AdminReports() {
       toDate: toDate || null,
     }),
     enabled: runTimeline,
+  });
+
+  const { data: bedeliaData, isLoading: bedeliaLoading } = useQuery({
+    queryKey: ['bedeliaReport', fromDate, toDate, runBedelia],
+    queryFn: () => {
+      const params: Record<string, string> = {};
+      if (fromDate) params.fromDate = fromDate;
+      if (toDate) params.toDate = toDate;
+      return api.get<BedeliaReportResponse>('/reports/bedelia', params);
+    },
+    enabled: runBedelia,
   });
 
   const { data: proposalData, isLoading: proposalLoading } = useQuery({
@@ -226,6 +258,7 @@ export default function AdminReports() {
           <TabsTrigger value="proposal"><Users className="h-4 w-4 mr-1.5" />Por propuesta/docente</TabsTrigger>
           <TabsTrigger value="carga"><Clock className="h-4 w-4 mr-1.5" />Carga horaria docente</TabsTrigger>
           <TabsTrigger value="timeline"><CalendarDays className="h-4 w-4 mr-1.5" />Historial de aulas</TabsTrigger>
+          <TabsTrigger value="bedelia"><KeyRound className="h-4 w-4 mr-1.5" />Bedelía</TabsTrigger>
         </TabsList>
 
         <TabsContent value="usage">
@@ -645,6 +678,100 @@ export default function AdminReports() {
               <div className="text-center py-16 text-primary-400">
                 <CalendarDays className="h-12 w-12 mx-auto mb-3 opacity-50" />
                 <p className="font-medium">Selecciona un rango de fechas para ver el historial de aulas</p>
+              </div>
+            )}
+          </div>
+        </TabsContent>
+        <TabsContent value="bedelia">
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-3 items-end bg-white p-4 rounded-lg border border-primary-100">
+              <div>
+                <label className="block text-xs font-medium text-primary-600 mb-1">Desde</label>
+                <Input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-primary-600 mb-1">Hasta</label>
+                <Input type="date" value={toDate} onChange={e => setToDate(e.target.value)} />
+              </div>
+              <Button variant="accent" onClick={() => setRunBedelia(true)}>
+                <KeyRound className="h-4 w-4 mr-1.5" />
+                Generar reporte
+              </Button>
+            </div>
+
+            {bedeliaLoading ? (
+              <div className="text-center py-16 text-primary-400">Cargando...</div>
+            ) : bedeliaData ? (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="bg-white rounded-lg border border-primary-100 p-4">
+                    <p className="text-xs text-primary-500 font-medium uppercase tracking-wider">Entregas Totales</p>
+                    <p className="text-2xl font-bold text-primary-800 mt-1">{bedeliaData.totalDeliveries}</p>
+                  </div>
+                  <div className="bg-white rounded-lg border border-primary-100 p-4">
+                    <p className="text-xs text-primary-500 font-medium uppercase tracking-wider">Activas</p>
+                    <p className="text-2xl font-bold text-green-600 mt-1">{bedeliaData.activeDeliveries}</p>
+                  </div>
+                  <div className="bg-white rounded-lg border border-primary-100 p-4">
+                    <p className="text-xs text-primary-500 font-medium uppercase tracking-wider">Devueltas</p>
+                    <p className="text-2xl font-bold text-primary-500 mt-1">{bedeliaData.returnedDeliveries}</p>
+                  </div>
+                </div>
+
+                {bedeliaData.topAccessories.length > 0 && (
+                  <div>
+                    <h3 className="font-heading text-lg font-semibold text-primary-700 mb-3">Accesorios más entregados</h3>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Accesorio</TableHead>
+                            <TableHead>Veces entregado</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {bedeliaData.topAccessories.map((item, i) => (
+                            <TableRow key={i}>
+                              <TableCell className="font-medium">{item.name}</TableCell>
+                              <TableCell>{item.deliveryCount}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <h3 className="font-heading text-lg font-semibold text-primary-700 mb-3">Entregas por aula</h3>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Aula</TableHead>
+                          <TableHead>Edificio</TableHead>
+                          <TableHead>Entregas</TableHead>
+                          <TableHead>Activas</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {bedeliaData.byClassroom.map((item, i) => (
+                          <TableRow key={i}>
+                            <TableCell className="font-medium">{item.classroomName}</TableCell>
+                            <TableCell>{item.buildingName || '-'}</TableCell>
+                            <TableCell>{item.deliveryCount}</TableCell>
+                            <TableCell>{item.activeCount}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-16 text-primary-400">
+                <KeyRound className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p className="font-medium">Selecciona un rango de fechas para ver el reporte de bedelía</p>
               </div>
             )}
           </div>

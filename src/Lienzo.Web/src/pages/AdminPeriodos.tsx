@@ -12,6 +12,7 @@ interface Periodo {
   fechaInicio: string;
   fechaFin: string;
   anio: number;
+  isActive: boolean;
 }
 
 export default function AdminPeriodos() {
@@ -38,6 +39,11 @@ export default function AdminPeriodos() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/periodos/${id}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['periodos'] }),
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: (id: string) => api.patch(`/periodos/${id}/toggle-active`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['periodos'] }),
   });
 
@@ -126,16 +132,30 @@ export default function AdminPeriodos() {
                 <TableHead>Inicio</TableHead>
                 <TableHead>Fin</TableHead>
                 <TableHead>Año</TableHead>
+                <TableHead className="w-24 text-center">Activo</TableHead>
                 <TableHead className="w-20 text-right">Acción</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {[...periodos].sort((a, b) => b.anio - a.anio || a.nombre.localeCompare(b.nombre)).map(p => (
-                <TableRow key={p.id}>
+                <TableRow key={p.id} className={!p.isActive ? 'opacity-50' : ''}>
                   <TableCell className="font-medium">{p.nombre}</TableCell>
                   <TableCell className="text-primary-500">{p.fechaInicio}</TableCell>
                   <TableCell className="text-primary-500">{p.fechaFin}</TableCell>
                   <TableCell className="text-primary-500">{p.anio}</TableCell>
+                  <TableCell className="text-center">
+                    <button
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                        p.isActive
+                          ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      }`}
+                      onClick={() => toggleMutation.mutate(p.id)}
+                      title={p.isActive ? 'Desactivar' : 'Activar'}
+                    >
+                      {p.isActive ? 'Sí' : 'No'}
+                    </button>
+                  </TableCell>
                   <TableCell className="text-right">
                     <button className="p-1.5 rounded-md text-red-500 hover:bg-red-50" onClick={() => deleteMutation.mutate(p.id)} title="Eliminar"><Trash2 className="h-4 w-4" /></button>
                   </TableCell>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Star, ClipboardList, Clock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Star, ClipboardList, Clock, ArrowLeft } from 'lucide-react';
 import { api } from '@/lib/api';
 import { StarRating } from '@/components/ui/StarRating';
 import { Card, CardContent } from '@/components/ui/Card';
@@ -37,6 +38,7 @@ interface PendingSurvey {
 }
 
 export default function MySurveys() {
+  const navigate = useNavigate();
   const [tab, setTab] = useState('pending');
   const [surveyTarget, setSurveyTarget] = useState<PendingSurvey | null>(null);
 
@@ -55,6 +57,9 @@ export default function MySurveys() {
 
   return (
     <div className="space-y-6">
+      <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm text-primary-500 hover:text-primary-700 transition-colors sm:hidden mb-2">
+        <ArrowLeft className="h-4 w-4" /> Volver
+      </button>
       <div>
         <h1 className="font-heading text-2xl font-bold text-primary-800">Mis Encuestas</h1>
         <p className="text-primary-500 mt-1">Evaluaciones de aulas que has realizado</p>

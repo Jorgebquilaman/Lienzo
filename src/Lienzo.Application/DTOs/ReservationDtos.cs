@@ -23,6 +23,7 @@ public class ReservationDto
     public string? ActividadPeriodo { get; set; }
     public string? ActividadCarrera { get; set; }
     public string? ActividadDocentes { get; set; }
+    public List<string>? ActividadDocenteIds { get; set; }
 }
 
 public record CreateReservationRequest(Guid ClassroomId, string Title, string? Description, DateOnly Date, TimeOnly StartTime, TimeOnly EndTime, string? DaysOfWeek = null, DateOnly? EndDate = null, Guid? ActividadId = null);
@@ -30,3 +31,7 @@ public record CreateReservationRequest(Guid ClassroomId, string Title, string? D
 public record UpdateReservationRequest(string? Title, string? Description);
 
 public record PagedResult<T>(List<T> Items, int TotalCount, int Page, int PageSize, int TotalPages);
+
+public record ScheduleResponse(
+    List<ReservationDto> Reservations,
+    List<MaintenanceBlockDto> MaintenanceBlocks);

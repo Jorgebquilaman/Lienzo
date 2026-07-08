@@ -2,7 +2,7 @@ import { useState, useMemo, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  ChevronLeft, ChevronRight, Building2, Repeat, CalendarDays, User, Clock, MapPin, Tag, Calendar, Plus, BookOpen, ListOrdered, Search, Move, ClipboardCheck, AlertTriangle,
+  ChevronLeft, ChevronRight, Building2, Repeat, CalendarDays, User, Clock, MapPin, Tag, Calendar, Plus, BookOpen, ListOrdered, Search, Move, ClipboardCheck, AlertTriangle, ArrowLeft,
 } from 'lucide-react';
 import { addDays, subDays, format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody } from '@/
 import { getStatusLabel, getStatusColor } from '@/lib/utils';
 import { ReservationModal } from '@/components/classrooms/ReservationModal';
 import { useAuthStore } from '@/stores/authStore';
-import type { Building, Classroom, Reservation, UserRole } from '@/types';
+import type { Building, Classroom, Reservation, MaintenanceBlock, ScheduleResponse, UserRole } from '@/types';
 
 const DAY_LABELS: Record<string, string> = {
   Monday: 'Lun', Tuesday: 'Mar', Wednesday: 'Mié', Thursday: 'Jue',
@@ -142,15 +142,18 @@ export default function SchedulePage() {
     return [...list].sort((a, b) => a.name.localeCompare(b.name, 'es', { numeric: true }));
   }, [classrooms, classroomId]);
 
-  const { data: reservations, isLoading } = useQuery({
+  const { data: scheduleData, isLoading } = useQuery({
     queryKey: ['schedule', dateStr, buildingId, classroomId],
     queryFn: () =>
-      api.get<Reservation[]>(
+      api.get<ScheduleResponse>(
         `/reservations/schedule?fromDate=${dateStr}&toDate=${dateStr}${buildingId ? `&buildingId=${buildingId}` : ''}${classroomId ? `&classroomId=${classroomId}` : ''}`
       ),
     enabled: !!buildingId,
     refetchInterval: 15_000,
   });
+
+  const reservations = scheduleData?.reservations || [];
+  const maintenanceBlocks = scheduleData?.maintenanceBlocks || [];
 
   const { data: holidaysResponse } = useQuery({
     queryKey: ['holidays'],
@@ -204,6 +207,17 @@ export default function SchedulePage() {
     },
   });
 
+  const cancelMutation = useMutation({
+    mutationFn: (id: string) => api.patch(`/reservations/${id}/cancel`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['schedule'] });
+      setSelectedReservation(null);
+    },
+    onError: (err: any) => {
+      alert(err?.message || 'Error al cancelar la reserva');
+    },
+  });
+
   const cancelFutureMutation = useMutation({
     mutationFn: (id: string) => api.patch(`/reservations/${id}/cancel-future`),
     onSuccess: () => {
@@ -232,7 +246,19 @@ export default function SchedulePage() {
     );
   }, [actividades, reservations]);
 
+  const myActividades = useMemo(() => {
+    if (!actividades || !user) return [];
+    const dayMap: Record<string, string> = {
+      Monday: 'Lun', Tuesday: 'Mar', Wednesday: 'Mié', Thursday: 'Jue', Friday: 'Vie', Saturday: 'Sáb',
+    };
+    const currentDayName = Object.entries(dayMap).find(([, v]) => v === dayName)?.[0] || dayName;
+    return actividades.filter(
+      (a) => a.aulaId && a.diaSemana && a.docenteIds.includes(user.id) && a.diaSemana === currentDayName
+    );
+  }, [actividades, user, dayName]);
+
   const [showUnassigned, setShowUnassigned] = useState(false);
+  const [showMyClases, setShowMyClases] = useState(false);
   const [unassignedAct, setUnassignedAct] = useState<Actividad | null>(null);
   const [unassignedSearch, setUnassignedSearch] = useState('');
 
@@ -259,6 +285,34 @@ export default function SchedulePage() {
     }
     return map;
   }, [reservations]);
+
+  const maintenanceByClassroom = useMemo(() => {
+    const map: Record<string, MaintenanceBlock[]> = {};
+    for (const m of maintenanceBlocks) {
+      if (!map[m.classroomId]) map[m.classroomId] = [];
+      map[m.classroomId].push(m);
+    }
+    return map;
+  }, [maintenanceBlocks]);
+
+  function maintClampMinutes(isoStr: string, viewDate: Date): number {
+    const d = new Date(isoStr);
+    const view = new Date(viewDate);
+    const isBefore = d.getFullYear() < view.getFullYear() ||
+      (d.getFullYear() === view.getFullYear() && d.getMonth() < view.getMonth()) ||
+      (d.getFullYear() === view.getFullYear() && d.getMonth() === view.getMonth() && d.getDate() < view.getDate());
+    const isAfter = d.getFullYear() > view.getFullYear() ||
+      (d.getFullYear() === view.getFullYear() && d.getMonth() > view.getMonth()) ||
+      (d.getFullYear() === view.getFullYear() && d.getMonth() === view.getMonth() && d.getDate() > view.getDate());
+    if (isBefore) return MIN_TIME;
+    if (isAfter) return MAX_TIME;
+    return Math.max(MIN_TIME, Math.min(MAX_TIME, d.getHours() * 60 + d.getMinutes()));
+  }
+
+  function maintFormatTime(isoStr: string): string {
+    const d = new Date(isoStr);
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  }
 
   const prevDay = () => setCurrentDate((d) => subDays(d, 1));
   const nextDay = () => setCurrentDate((d) => addDays(d, 1));
@@ -300,82 +354,127 @@ export default function SchedulePage() {
 
   return (
     <div className="space-y-6">
+      <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm text-primary-500 hover:text-primary-700 transition-colors sm:hidden mb-2">
+        <ArrowLeft className="h-4 w-4" /> Volver
+      </button>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="font-heading text-2xl font-bold text-primary-800">Horario</h1>
           <p className="text-primary-500 mt-1">Vista general de ocupación de aulas</p>
         </div>
+        {myActividades.length > 0 && (
+          <Button variant="outline" size="sm" onClick={() => setShowMyClases(!showMyClases)} className={`${showMyClases ? 'bg-accent-50 border-accent-300 text-accent-700' : ''} shrink-0`}>
+            <ClipboardCheck className="h-4 w-4 mr-1" />
+            Mis clases ({myActividades.length})
+          </Button>
+        )}
+        {unassignedActividades.length > 0 && (
+          <Button variant="outline" size="sm" onClick={() => setShowUnassigned(!showUnassigned)} className={`${showUnassigned ? 'bg-accent-50 border-accent-300 text-accent-700' : ''} shrink-0`}>
+            <ListOrdered className="h-4 w-4 mr-1" />
+            No asignados ({unassignedActividades.length})
+          </Button>
+        )}
       </div>
 
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="w-56">
-          <Select
-            label="Edificio"
-            placeholder="Seleccionar edificio"
-            value={buildingId}
-            onValueChange={(v) => { setBuildingId(v); setClassroomId(''); }}
-            options={(buildings || []).map((b) => ({ value: b.id, label: b.name }))}
-          />
-        </div>
-
-        <div className="w-56">
-          <Select
-            label="Aula"
-            placeholder="Todas las aulas"
-            value={classroomId}
-            onValueChange={(v) => setClassroomId(v)}
-            options={(classrooms || []).map((c) => ({ value: c.id, label: `${c.name} (Piso ${c.floor})` }))}
-          />
-        </div>
-
-        <div className="w-40">
-          <Select
-            label="Color por"
-            value={colorMode}
-            onValueChange={(v) => setColorMode(v as 'status' | 'period')}
-            options={[
-              { value: 'status', label: 'Estado' },
-              { value: 'period', label: 'Periodo' },
-            ]}
-          />
-        </div>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setViewMode(prev => prev === 'classroom' ? 'time' : 'classroom')}
-          className={`${viewMode === 'time' ? 'bg-accent-50 border-accent-300 text-accent-700' : ''}`}
-        >
-          {viewMode === 'classroom' ? 'Por horarios' : 'Por aulas'}
-        </Button>
-
-        <div className="flex items-center gap-1">
-          <Button variant="outline" size="sm" onClick={prevDay}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <div className="px-3 text-center min-w-[180px]">
-            <p className="text-sm font-medium text-primary-700 capitalize">{dayName}</p>
-            <p className="text-xs text-primary-400">{dayLabel}</p>
+      <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:items-end gap-3 flex-1">
+          <div className="w-full sm:w-56">
+            <Select
+              label="Edificio"
+              placeholder="Seleccionar edificio"
+              value={buildingId}
+              onValueChange={(v) => { setBuildingId(v); setClassroomId(''); }}
+              options={(buildings || []).map((b) => ({ value: b.id, label: b.name }))}
+            />
           </div>
-          <Button variant="outline" size="sm" onClick={nextDay}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={goToday} className="text-xs ml-1">
-            Hoy
-          </Button>
-          <div className="relative ml-2">
-            <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-primary-400 pointer-events-none" />
-            <input type="date" value={dateStr} onChange={e => setCurrentDate(new Date(e.target.value + 'T12:00:00'))}
-              className="pl-8 pr-3 py-1.5 text-sm border border-primary-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-accent-300" />
+
+          <div className="w-full sm:w-56">
+            <Select
+              label="Aula"
+              placeholder="Todas las aulas"
+              value={classroomId}
+              onValueChange={(v) => setClassroomId(v)}
+              options={(classrooms || []).map((c) => ({ value: c.id, label: `${c.name} (Piso ${c.floor})` }))}
+            />
           </div>
-          {unassignedActividades.length > 0 && (
-            <Button variant="outline" size="sm" onClick={() => setShowUnassigned(!showUnassigned)} className={`ml-2 ${showUnassigned ? 'bg-accent-50 border-accent-300 text-accent-700' : ''}`}>
-              <ListOrdered className="h-4 w-4 mr-1" />
-              No asignados ({unassignedActividades.length})
+
+          <div className="w-full sm:w-40">
+            <Select
+              label="Color por"
+              value={colorMode}
+              onValueChange={(v) => setColorMode(v as 'status' | 'period')}
+              options={[
+                { value: 'status', label: 'Estado' },
+                { value: 'period', label: 'Periodo' },
+              ]}
+            />
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setViewMode(prev => prev === 'classroom' ? 'time' : 'classroom')}
+            className={`self-start sm:self-end ${viewMode === 'time' ? 'bg-accent-50 border-accent-300 text-accent-700' : ''}`}
+          >
+            {viewMode === 'classroom' ? 'Por horarios' : 'Por aulas'}
+          </Button>
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-1">
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="sm" onClick={prevDay}>
+              <ChevronLeft className="h-4 w-4" />
             </Button>
-          )}
+            <div className="px-2 text-center min-w-[140px] sm:min-w-[180px]">
+              <p className="text-sm font-medium text-primary-700 capitalize">{dayName}</p>
+              <p className="text-xs text-primary-400">{dayLabel}</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={nextDay}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={goToday} className="text-xs">
+              Hoy
+            </Button>
+            <div className="relative flex-1 sm:flex-none">
+              <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-primary-400 pointer-events-none" />
+              <input type="date" value={dateStr} onChange={e => setCurrentDate(new Date(e.target.value + 'T12:00:00'))}
+                className="w-full sm:w-auto pl-8 pr-3 py-1.5 text-sm border border-primary-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-accent-300" />
+            </div>
+          </div>
         </div>
       </div>
+
+      {showMyClases && myActividades.length > 0 && (
+        <Card>
+          <CardContent className="p-4">
+            <h3 className="text-sm font-semibold text-primary-700 mb-3 flex items-center gap-2">
+              <ClipboardCheck className="h-4 w-4 text-accent-500" />
+              Mis clases ({dayName})
+            </h3>
+            <div className="space-y-2">
+              {myActividades.map((act) => (
+                <div key={act.id} className="flex items-center justify-between p-2.5 rounded-lg border border-primary-100 hover:border-accent-200 transition-colors">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-primary-700 truncate">{act.nombre}</p>
+                    <p className="text-xs text-primary-400 mt-0.5">
+                      <span className="inline-flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {act.horaInicio}-{act.horaFin}
+                      </span>
+                      <span className="inline-flex items-center gap-1 ml-3">
+                        <MapPin className="h-3 w-3" />
+                        {act.aulaNombre}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {showUnassigned && unassignedActividades.length > 0 && (
         <Card>
@@ -520,6 +619,20 @@ export default function SchedulePage() {
                                 </div>
                               </div>
                             )}
+                            {(maintenanceByClassroom[classroom.id] || []).some((m) => {
+                              const ms = maintClampMinutes(m.startTime, currentDate);
+                              const me = maintClampMinutes(m.endTime, currentDate);
+                              const cellStart = hour * 60;
+                              const cellEnd = (hour + 1) * 60;
+                              return ms < cellEnd && me > cellStart;
+                            }) && (
+                              <div
+                                className="absolute inset-0 z-10 text-[9px] text-white font-semibold flex items-center justify-center overflow-hidden pointer-events-none bg-red-600"
+                                title="Mantenimiento"
+                              >
+                                ⚠
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -595,6 +708,25 @@ export default function SchedulePage() {
                                 <span className="text-[10px] opacity-80">
                                   {r.startTime}-{r.endTime}
                                 </span>
+                              </div>
+                            );
+                          })}
+                          {(maintenanceByClassroom[classroom.id] || []).map((m) => {
+                            const ms = maintClampMinutes(m.startTime, currentDate);
+                            const me = maintClampMinutes(m.endTime, currentDate);
+                            const left = ((ms - MIN_TIME) / TOTAL_MINUTES) * 100;
+                            const width = ((me - ms) / TOTAL_MINUTES) * 100;
+                            return (
+                              <div
+                                key={m.id}
+                                className="absolute top-1 bottom-1 rounded px-1.5 py-1 text-xs text-white overflow-hidden cursor-default z-20 bg-red-600 border border-red-800"
+                                style={{ left: `${left}%`, width: `${width}%` }}
+                                title={`Mantenimiento: ${m.reason} (${maintFormatTime(m.startTime)}-${maintFormatTime(m.endTime)})`}
+                              >
+                                <span className="truncate block leading-tight font-semibold">
+                                  ⚠ Mantenimiento
+                                </span>
+                                <span className="text-[10px] opacity-90 truncate block">{m.reason}</span>
                               </div>
                             );
                           })}
@@ -696,8 +828,23 @@ export default function SchedulePage() {
                   {selectedReservation.actividadPeriodo && <p className="text-xs text-primary-500">Periodo: {selectedReservation.actividadPeriodo}</p>}
                   {selectedReservation.actividadCarrera && <p className="text-xs text-primary-500">Carrera: {selectedReservation.actividadCarrera}</p>}
                   {selectedReservation.actividadDocentes && <p className="text-xs text-primary-500">Docentes: {selectedReservation.actividadDocentes}</p>}
-                  {selectedReservation.status === 'Approved' && <ExistingClaseButton reservationId={selectedReservation.id} />}
+                  {selectedReservation.status === 'Approved' && (user?.role === 'Admin' || selectedReservation.actividadDocenteIds?.includes(user?.id ?? '')) && <ExistingClaseButton reservationId={selectedReservation.id} />}
                 </div>
+              )}
+              {(selectedReservation.status === 'Pending' || selectedReservation.status === 'Approved') && (user?.role === 'Admin' || selectedReservation.userId === user?.id || selectedReservation.actividadDocenteIds?.includes(user?.id ?? '')) && !movingReservation && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full border-red-300 text-red-600 hover:bg-red-50"
+                  disabled={cancelMutation.isPending}
+                  onClick={() => {
+                    if (window.confirm('¿Estás seguro de cancelar esta reserva?')) {
+                      cancelMutation.mutate(selectedReservation.id);
+                    }
+                  }}
+                >
+                  {cancelMutation.isPending ? 'Cancelando...' : 'Cancelar reserva'}
+                </Button>
               )}
               {selectedReservation.status === 'Approved' && user?.role === 'Admin' && !movingReservation && (
                 <Button variant="outline" size="sm" className="w-full" onClick={() => setMovingReservation(true)}>

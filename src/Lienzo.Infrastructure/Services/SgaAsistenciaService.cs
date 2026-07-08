@@ -54,12 +54,13 @@ public class SgaAsistenciaService : ISgaAsistenciaService
 
         await using var cmd = new NpgsqlCommand(
             @"SELECT sc.clase, sc.fecha, scb.comision, sa.alumno, mp.persona,
-                     mp.apellido, mp.nombres, mp.usuario
+                     mp.apellido, mp.nombres, mp.usuario, mpc.email
               FROM negocio.sga_clases sc
               INNER JOIN negocio.sga_comisiones_bh scb ON scb.banda_horaria = sc.banda_horaria
               INNER JOIN negocio.sga_clases_asistencia sca ON sca.clase = sc.clase
               INNER JOIN negocio.sga_alumnos sa ON sa.alumno = sca.alumno
               INNER JOIN negocio.mdp_personas mp ON mp.persona = sa.persona
+              INNER JOIN negocio.mdp_personas_contactos mpc ON mpc.persona = mp.persona AND mpc.contacto_tipo = 'MP'
               WHERE scb.comision = @comision AND sc.fecha = @fecha
               ORDER BY mp.apellido, mp.nombres", conn);
         cmd.Parameters.AddWithValue("comision", comision);
@@ -77,7 +78,7 @@ public class SgaAsistenciaService : ISgaAsistenciaService
                 PersonaId = r.GetInt32(4),
                 Apellido = r.IsDBNull(5) ? "" : r.GetString(5).Trim(),
                 Nombres = r.IsDBNull(6) ? "" : r.GetString(6).Trim(),
-                Email = r.IsDBNull(7) ? "" : r.GetString(7).Trim(),
+                Email = r.IsDBNull(8) ? "" : r.GetString(8).Trim(),
                 SgaAsistenciaId = 0,
             });
         }
@@ -91,9 +92,10 @@ public class SgaAsistenciaService : ISgaAsistenciaService
         var items = new List<SgaClaseAlumnoInfo>();
 
         await using var cmd = new NpgsqlCommand(
-            @"SELECT DISTINCT sa.alumno, mp.persona, mp.apellido, mp.nombres, mp.usuario
+            @"SELECT DISTINCT sa.alumno, mp.persona, mp.apellido, mp.nombres, mp.usuario, mpc.email
               FROM negocio.sga_alumnos sa
               INNER JOIN negocio.mdp_personas mp ON mp.persona = sa.persona
+              INNER JOIN negocio.mdp_personas_contactos mpc ON mpc.persona = mp.persona AND mpc.contacto_tipo = 'MP'
               WHERE EXISTS (
                   SELECT 1 FROM negocio.sga_clases_asistencia sca
                   INNER JOIN negocio.sga_clases sc ON sc.clase = sca.clase
@@ -113,7 +115,7 @@ public class SgaAsistenciaService : ISgaAsistenciaService
                 PersonaId = r.GetInt32(1),
                 Apellido = r.IsDBNull(2) ? "" : r.GetString(2).Trim(),
                 Nombres = r.IsDBNull(3) ? "" : r.GetString(3).Trim(),
-                Email = r.IsDBNull(4) ? "" : r.GetString(4).Trim(),
+                Email = r.IsDBNull(5) ? "" : r.GetString(5).Trim(),
                 SgaAsistenciaId = 0,
             });
         }
@@ -128,21 +130,23 @@ public class SgaAsistenciaService : ISgaAsistenciaService
 
         var sql = fecha is not null
             ? @"SELECT sc.clase, sc.fecha, scb.comision, sa.alumno, mp.persona,
-                       mp.apellido, mp.nombres, mp.usuario
+                       mp.apellido, mp.nombres, mp.usuario, mpc.email
                 FROM negocio.sga_clases sc
                 INNER JOIN negocio.sga_comisiones_bh scb ON scb.banda_horaria = sc.banda_horaria
                 INNER JOIN negocio.sga_clases_asistencia sca ON sca.clase = sc.clase
                 INNER JOIN negocio.sga_alumnos sa ON sa.alumno = sca.alumno
                 INNER JOIN negocio.mdp_personas mp ON mp.persona = sa.persona
+                INNER JOIN negocio.mdp_personas_contactos mpc ON mpc.persona = mp.persona AND mpc.contacto_tipo = 'MP'
                 WHERE scb.comision = @comision AND sc.fecha = @fecha
                 ORDER BY mp.apellido, mp.nombres"
             : @"SELECT DISTINCT sc.clase, sc.fecha, scb.comision, sa.alumno, mp.persona,
-                       mp.apellido, mp.nombres, mp.usuario
+                       mp.apellido, mp.nombres, mp.usuario, mpc.email
                 FROM negocio.sga_clases sc
                 INNER JOIN negocio.sga_comisiones_bh scb ON scb.banda_horaria = sc.banda_horaria
                 INNER JOIN negocio.sga_clases_asistencia sca ON sca.clase = sc.clase
                 INNER JOIN negocio.sga_alumnos sa ON sa.alumno = sca.alumno
                 INNER JOIN negocio.mdp_personas mp ON mp.persona = sa.persona
+                INNER JOIN negocio.mdp_personas_contactos mpc ON mpc.persona = mp.persona AND mpc.contacto_tipo = 'MP'
                 WHERE scb.comision = @comision
                 ORDER BY mp.apellido, mp.nombres";
 
@@ -163,7 +167,7 @@ public class SgaAsistenciaService : ISgaAsistenciaService
                 PersonaId = r.GetInt32(4),
                 Apellido = r.IsDBNull(5) ? "" : r.GetString(5).Trim(),
                 Nombres = r.IsDBNull(6) ? "" : r.GetString(6).Trim(),
-                Email = r.IsDBNull(7) ? "" : r.GetString(7).Trim(),
+                Email = r.IsDBNull(8) ? "" : r.GetString(8).Trim(),
                 SgaAsistenciaId = 0,
             });
         }

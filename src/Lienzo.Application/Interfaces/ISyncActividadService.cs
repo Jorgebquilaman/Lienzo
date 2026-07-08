@@ -12,6 +12,7 @@ public class ExternalActividadInfo
     public int? PropuestaId { get; init; }
     public string? PropuestaCodigo { get; init; }
     public List<string> DocenteNames { get; set; } = [];
+    public Dictionary<string, string> DocenteEmails { get; set; } = new();
 
     // Schedule from sga_asignaciones
     public string? DiaSemana { get; init; }

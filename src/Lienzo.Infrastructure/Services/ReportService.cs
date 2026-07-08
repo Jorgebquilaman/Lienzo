@@ -362,4 +362,51 @@ public class ReportService : IReportService
         return Result<ClassroomTimelineResponse>.Success(new(
             byClassroom, dateRange, reservations.Count));
     }
+
+    public async Task<Result<BedeliaReportResponse>> GetBedeliaReportAsync(DateOnly? fromDate, DateOnly? toDate)
+    {
+        var query = _context.KeyDeliveries
+            .Include(k => k.Classroom)
+            .ThenInclude(c => c.Building)
+            .Include(k => k.Accessories)
+            .ThenInclude(ka => ka.Accessory)
+            .AsQueryable();
+
+        if (fromDate.HasValue)
+        {
+            var from = fromDate.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+            query = query.Where(k => k.DeliveredAt >= from);
+        }
+        if (toDate.HasValue)
+        {
+            var to = toDate.Value.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
+            query = query.Where(k => k.DeliveredAt <= to);
+        }
+
+        var deliveries = await query.ToListAsync();
+
+        var total = deliveries.Count;
+        var active = deliveries.Count(k => k.ReturnedAt == null);
+        var returned = deliveries.Count(k => k.ReturnedAt != null);
+
+        var topAccessories = deliveries
+            .SelectMany(k => k.Accessories)
+            .GroupBy(ka => ka.Accessory.Name)
+            .Select(g => new BedeliaAccessorySummary(g.Key, g.Count()))
+            .OrderByDescending(a => a.DeliveryCount)
+            .Take(10)
+            .ToList();
+
+        var byClassroom = deliveries
+            .GroupBy(k => new { k.ClassroomId, k.Classroom.Name, BuildingName = k.Classroom.Building != null ? k.Classroom.Building.Name : null })
+            .Select(g => new BedeliaClassroomSummary(
+                g.Key.Name,
+                g.Key.BuildingName,
+                g.Count(),
+                g.Count(k => k.ReturnedAt == null)))
+            .OrderByDescending(c => c.DeliveryCount)
+            .ToList();
+
+        return Result<BedeliaReportResponse>.Success(new(total, active, returned, topAccessories, byClassroom));
+    }
 }

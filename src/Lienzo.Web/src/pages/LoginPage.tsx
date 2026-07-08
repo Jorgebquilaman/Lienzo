@@ -96,20 +96,11 @@ export default function LoginPage() {
               className="text-primary-400 hover:text-accent-600"
               onClick={() => navigate('/forgot-password')}
             >
-              ¿Olvidaste tu contraseña?
+              ¿Olvidaste tu contraseña? o eres usuario nuevo
             </button>
           </div>
 
-          <p className="text-center text-sm text-primary-400 mt-4">
-            ¿No tienes cuenta?{' '}
-            <button
-              type="button"
-              className="text-accent-600 font-medium hover:text-accent-700"
-              onClick={() => navigate('/register')}
-            >
-              Regístrate
-            </button>
-          </p>
+
         </div>
       </div>
     </div>

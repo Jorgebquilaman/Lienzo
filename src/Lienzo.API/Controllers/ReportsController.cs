@@ -1,4 +1,5 @@
 using Lienzo.Application.DTOs;
+using Lienzo.Application.Queries.GetBedeliaReport;
 using Lienzo.Application.Queries.GetClassroomTimeline;
 using Lienzo.Application.Queries.GetDemandMetrics;
 using Lienzo.Application.Queries.GetDocenteCargaHoraria;
@@ -44,6 +45,13 @@ public class ReportsController : BaseApiController
     public async Task<IActionResult> GetClassroomTimeline([FromBody] ClassroomTimelineFilter filter)
     {
         var result = await Mediator.Send(new GetClassroomTimelineQuery(filter));
+        return HandleResult(result);
+    }
+
+    [HttpGet("bedelia")]
+    public async Task<IActionResult> GetBedeliaReport([FromQuery] DateOnly? fromDate, [FromQuery] DateOnly? toDate)
+    {
+        var result = await Mediator.Send(new GetBedeliaReportQuery(fromDate, toDate));
         return HandleResult(result);
     }
 }

@@ -6,6 +6,7 @@ using Lienzo.Domain.Entities;
 using Lienzo.Domain.Enums;
 using Lienzo.Domain.Interfaces;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace Lienzo.Application.Commands.CancelReservation;
 
@@ -36,7 +37,11 @@ public class CancelReservationCommandHandler : IRequestHandler<CancelReservation
         if (reservation is null)
             return Result<ReservationDto>.Failure("Reservation not found", "NOT_FOUND");
 
-        if (reservation.UserId != _currentUser.UserId)
+        var canCancel = reservation.UserId == _currentUser.UserId
+            || _currentUser.Role == Domain.Enums.UserRole.Admin.ToString()
+            || (reservation.ActividadId.HasValue && await IsDocenteOfActividad(reservation.ActividadId.Value, cancellationToken));
+
+        if (!canCancel)
             return Result<ReservationDto>.Failure("You can only cancel your own reservations", "FORBIDDEN");
 
         try
@@ -74,5 +79,11 @@ public class CancelReservationCommandHandler : IRequestHandler<CancelReservation
 
         var dto = _mapper.Map<ReservationDto>(reservation);
         return Result<ReservationDto>.Success(dto);
+    }
+
+    private async Task<bool> IsDocenteOfActividad(Guid actividadId, CancellationToken ct)
+    {
+        return await _unitOfWork.ActividadDocentes.Query()
+            .AnyAsync(ad => ad.ActividadId == actividadId && ad.DocenteId == _currentUser.UserId.ToString(), ct);
     }
 }

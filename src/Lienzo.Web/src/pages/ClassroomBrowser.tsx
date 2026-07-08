@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Search, MapPin, Users, Filter, X, Map, Clock, AlertTriangle, Wifi, KeyRound } from 'lucide-react';
+import { Search, MapPin, Users, Filter, X, Map, Clock, AlertTriangle, Wifi, KeyRound, ArrowLeft } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -109,11 +109,72 @@ export default function ClassroomBrowser() {
 
   return (
     <div className="space-y-6">
+      <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm text-primary-500 hover:text-primary-700 transition-colors sm:hidden mb-2">
+        <ArrowLeft className="h-4 w-4" /> Volver
+      </button>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="font-heading text-2xl font-bold text-primary-800">Aulas</h1>
           <p className="text-primary-500 mt-1">Encuentra el aula perfecta para tu clase</p>
         </div>
+      </div>
+
+      <div className="sm:hidden">
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full mb-3"
+          onClick={() => setShowFilters(!showFilters)}
+        >
+          <Filter className="h-4 w-4 mr-1.5" />
+          {showFilters ? 'Ocultar filtros' : 'Mostrar filtros'}
+          {filtersActive && <span className="ml-1.5 w-2 h-2 rounded-full bg-accent-500" />}
+        </Button>
+        {showFilters && (
+          <div className="bg-white rounded-xl border border-primary-100 p-4 space-y-4 mb-3">
+            <Input
+              placeholder="Buscar aulas..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <Select
+              label="Edificio"
+              placeholder="Todos"
+              value={buildingFilter}
+              onValueChange={v => setBuildingFilter(v)}
+              options={buildings?.map((b) => ({ value: b.id, label: b.name })) || []}
+            />
+            <Select
+              label="Tipo"
+              placeholder="Todos"
+              value={typeFilter}
+              onValueChange={v => setTypeFilter(v)}
+              options={classroomTypes}
+            />
+            <Select
+              label="Ordenar"
+              value={sortBy}
+              onValueChange={v => setSortBy(v)}
+              options={[
+                { value: 'name-asc', label: 'Nombre A-Z' },
+                { value: 'name-desc', label: 'Nombre Z-A' },
+                { value: 'capacity-asc', label: 'Capacidad ↑' },
+                { value: 'capacity-desc', label: 'Capacidad ↓' },
+              ]}
+            />
+            {filtersActive && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-primary-400"
+                onClick={() => { setSearch(''); setBuildingFilter(''); setTypeFilter(''); }}
+              >
+                <X className="h-3 w-3 mr-1" />
+                Limpiar filtros
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
@@ -171,52 +232,7 @@ export default function ClassroomBrowser() {
               </div>
             </div>
 
-            {showFilters && (
-              <div className="fixed inset-0 z-50 sm:hidden">
-                <div className="absolute inset-0 bg-black/30" onClick={() => setShowFilters(false)} />
-                <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl p-6 space-y-4 animate-slide-up">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-heading font-semibold text-primary-800">Filtros</h3>
-                    <button onClick={() => setShowFilters(false)}>
-                      <X className="h-5 w-5 text-primary-400" />
-                    </button>
-                  </div>
-                  <Input
-                    placeholder="Buscar aulas..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                  <Select
-                    label="Edificio"
-                    placeholder="Todos"
-                    value={buildingFilter}
-                    onValueChange={v => setBuildingFilter(v)}
-                    options={buildings?.map((b) => ({ value: b.id, label: b.name })) || []}
-                  />
-                  <Select
-                    label="Tipo"
-                    placeholder="Todos"
-                    value={typeFilter}
-                    onValueChange={v => setTypeFilter(v)}
-                    options={classroomTypes}
-                  />
-                  <Select
-                    label="Ordenar"
-                    value={sortBy}
-                    onValueChange={v => setSortBy(v)}
-                    options={[
-                      { value: 'name-asc', label: 'Nombre A-Z' },
-                      { value: 'name-desc', label: 'Nombre Z-A' },
-                      { value: 'capacity-asc', label: 'Capacidad ↑' },
-                      { value: 'capacity-desc', label: 'Capacidad ↓' },
-                    ]}
-                  />
-                  <Button className="w-full" onClick={() => setShowFilters(false)}>
-                    Aplicar filtros
-                  </Button>
-                </div>
-              </div>
-            )}
+
 
             <div className="flex-1">
               {isLoading ? (

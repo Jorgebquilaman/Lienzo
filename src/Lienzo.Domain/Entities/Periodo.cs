@@ -11,6 +11,7 @@ public class Periodo : BaseEntity
     public int? CodigoExterno { get; private set; }
     public Guid? TipoPeriodoId { get; private set; }
     public TipoPeriodo? TipoPeriodo { get; private set; }
+    public bool IsActive { get; private set; } = true;
 
     private Periodo() { }
 
@@ -23,7 +24,14 @@ public class Periodo : BaseEntity
         Anio = anio;
         CodigoExterno = codigoExterno;
         TipoPeriodoId = tipoPeriodoId;
+        IsActive = true;
         CreatedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ToggleActive()
+    {
+        IsActive = !IsActive;
         UpdatedAt = DateTime.UtcNow;
     }
 

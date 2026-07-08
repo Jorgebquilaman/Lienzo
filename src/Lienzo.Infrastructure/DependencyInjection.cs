@@ -45,7 +45,8 @@ public static class DependencyInjection
             .AddRoles<IdentityRole<Guid>>()
             .AddEntityFrameworkStores<LienzoDbContext>()
             .AddSignInManager<SignInManager<ApplicationUser>>()
-            .AddRoleManager<RoleManager<IdentityRole<Guid>>>();
+            .AddRoleManager<RoleManager<IdentityRole<Guid>>>()
+            .AddDefaultTokenProviders();
 
         var jwtSettings = new JwtSettings();
         configuration.GetSection("JwtSettings").Bind(jwtSettings);
@@ -119,6 +120,7 @@ public static class DependencyInjection
         services.AddScoped<ISyncEstudianteService, SyncEstudianteService>();
         services.AddScoped<ISgaAsistenciaService, SgaAsistenciaService>();
         services.AddScoped<ISystemSettingService, SystemSettingService>();
+        services.AddScoped<IEmailService, EmailService>();
 
         services.AddScoped<IRepository<ReservationReminder>, GenericRepository<ReservationReminder>>();
 

@@ -10,4 +10,5 @@ public interface IReportService
     Task<Result<UsageByProposalResponse>> GetUsageByProposalAsync(UsageByProposalFilter filter);
     Task<Result<DocenteCargaHorariaResponse>> GetDocenteCargaHorariaAsync(DocenteCargaHorariaFilter filter);
     Task<Result<ClassroomTimelineResponse>> GetClassroomTimelineAsync(ClassroomTimelineFilter filter);
+    Task<Result<BedeliaReportResponse>> GetBedeliaReportAsync(DateOnly? fromDate, DateOnly? toDate);
 }

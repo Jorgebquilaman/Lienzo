@@ -26,3 +26,13 @@ export function AdminRoute() {
 
   return <Outlet />;
 }
+
+export function SuperAdminRoute() {
+  const user = useAuthStore((s) => s.user);
+
+  if (user?.email !== 'admin@lienzo.edu') {
+    return <Navigate to="/admin/reservations" replace />;
+  }
+
+  return <Outlet />;
+}

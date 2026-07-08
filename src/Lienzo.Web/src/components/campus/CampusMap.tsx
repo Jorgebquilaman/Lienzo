@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import {
   Building2, MapPin, Users, Clock, Wifi, AlertTriangle,
-  X, RefreshCw, Loader2, Image as ImageIcon
+  X, RefreshCw, Loader2, Image as ImageIcon, ArrowLeft
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
@@ -60,6 +61,7 @@ const typeLabel: Record<string, string> = {
 };
 
 export default function CampusMap() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'status' | 'plans'>('status');
   const [selectedClassroom, setSelectedClassroom] = useState<CampusClassroom | null>(null);
   const [selectedBuildingName, setSelectedBuildingName] = useState('');
@@ -375,6 +377,9 @@ export default function CampusMap() {
 
   return (
     <div className="space-y-6">
+      <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm text-primary-500 hover:text-primary-700 transition-colors sm:hidden mb-2">
+        <ArrowLeft className="h-4 w-4" /> Volver
+      </button>
       <div className="flex items-center gap-6 border-b border-primary-200">
         <button
           onClick={() => handleTabChange('status')}

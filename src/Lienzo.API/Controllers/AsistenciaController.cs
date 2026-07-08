@@ -8,6 +8,7 @@ using Lienzo.Application.Interfaces;
 using Lienzo.Application.Queries.GetClase;
 using Lienzo.Application.Queries.GetClasePorReserva;
 using Lienzo.Application.Queries.GetClasesList;
+using Lienzo.Application.Queries.GetMisPendientes;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -92,6 +93,13 @@ public class AsistenciaController : BaseApiController
         [FromQuery] int pageSize = 20)
     {
         var result = await Mediator.Send(new GetClasesListQuery(desde, hasta, actividadId, estado, page, pageSize));
+        return HandleResult(result);
+    }
+
+    [HttpGet("mis-pendientes")]
+    public async Task<IActionResult> GetMisPendientes()
+    {
+        var result = await Mediator.Send(new GetMisPendientesQuery());
         return HandleResult(result);
     }
 

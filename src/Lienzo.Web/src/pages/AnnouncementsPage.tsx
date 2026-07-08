@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Megaphone, AlertTriangle, Clock, Info, Send } from 'lucide-react';
+import { Megaphone, AlertTriangle, Clock, Info, Send, ArrowLeft } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -26,6 +27,7 @@ const announcementSchema = z.object({
 type AnnouncementFormData = z.infer<typeof announcementSchema>;
 
 export default function AnnouncementsPage() {
+  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const isTeacher = user?.role === 'Teacher' || user?.role === 'Admin';
   const [activeTab, setActiveTab] = useState(isTeacher ? 'compose' : 'inbox');
@@ -33,6 +35,9 @@ export default function AnnouncementsPage() {
   if (isTeacher) {
     return (
       <div className="space-y-6">
+        <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm text-primary-500 hover:text-primary-700 transition-colors sm:hidden mb-2">
+          <ArrowLeft className="h-4 w-4" /> Volver
+        </button>
         <div>
           <h1 className="font-heading text-2xl font-bold text-primary-800">Anuncios</h1>
           <p className="text-primary-500 mt-1">Comunícate con los estudiantes</p>
@@ -61,6 +66,9 @@ export default function AnnouncementsPage() {
 
   return (
     <div className="space-y-6">
+      <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm text-primary-500 hover:text-primary-700 transition-colors sm:hidden mb-2">
+        <ArrowLeft className="h-4 w-4" /> Volver
+      </button>
       <div>
         <h1 className="font-heading text-2xl font-bold text-primary-800">Anuncios</h1>
         <p className="text-primary-500 mt-1">Mantente al tanto de las novedades</p>

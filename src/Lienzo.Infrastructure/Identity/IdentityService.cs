@@ -23,19 +23,25 @@ public class IdentityService : IAuthService
     private readonly RoleManager<IdentityRole<Guid>> _roleManager;
     private readonly JwtSettings _jwtSettings;
     private readonly ILogger<IdentityService> _logger;
+    private readonly IEmailService _emailService;
+    private readonly ISystemSettingService _settings;
 
     public IdentityService(
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
         RoleManager<IdentityRole<Guid>> roleManager,
         IOptions<JwtSettings> jwtSettings,
-        ILogger<IdentityService> logger)
+        ILogger<IdentityService> logger,
+        IEmailService emailService,
+        ISystemSettingService settings)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _roleManager = roleManager;
         _jwtSettings = jwtSettings.Value;
         _logger = logger;
+        _emailService = emailService;
+        _settings = settings;
     }
 
     public async Task<Result<AuthResponse>> LoginAsync(LoginRequest request)
@@ -260,14 +266,28 @@ public class IdentityService : IAuthService
     {
         var user = await _userManager.FindByEmailAsync(request.Email);
         if (user is null)
-            return Result<string>.Success("Si el correo existe, recibirás un código de recuperación.");
+            return Result<string>.Success("Si el correo existe, recibirás un enlace de recuperación.");
 
-        var code = Random.Shared.Next(100000, 999999).ToString();
-        user.PasswordResetCode = code;
-        user.PasswordResetCodeExpiry = DateTime.UtcNow.AddMinutes(15);
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+        user.PasswordResetCode = token;
+        user.PasswordResetCodeExpiry = DateTime.UtcNow.AddHours(24);
         await _userManager.UpdateAsync(user);
 
-        return Result<string>.Success(code);
+        var publicUrl = await _settings.GetValueAsync("PublicUrl") ?? "";
+        var baseUrl = string.IsNullOrEmpty(publicUrl) ? "" : publicUrl.TrimEnd('/');
+        var resetLink = $"{baseUrl}/reset-password?email={Uri.EscapeDataString(request.Email)}&code={Uri.EscapeDataString(token)}";
+        var body = $"<h1>Recuperación de contraseña</h1><p>Hacé clic en el siguiente enlace para restablecer tu contraseña:</p><p><a href='{resetLink}'>Restablecer contraseña</a></p><p>Este enlace expira en 24 horas. Si no solicitaste este cambio, ignorá este mensaje.</p>";
+
+        try
+        {
+            await _emailService.SendAsync(request.Email, "Recuperación de contraseña - Lienzo", body);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send password reset email to {Email}", request.Email);
+        }
+
+        return Result<string>.Success("Si el correo existe, recibirás un enlace de recuperación.");
     }
 
     public async Task<Result<bool>> ResetPasswordAsync(ResetPasswordRequest request)
@@ -276,17 +296,13 @@ public class IdentityService : IAuthService
             return Result<bool>.Failure("Las contraseñas no coinciden.", "PASSWORD_MISMATCH");
 
         var user = await _userManager.FindByEmailAsync(request.Email);
-        if (user is null || user.PasswordResetCode != request.Code || user.PasswordResetCodeExpiry < DateTime.UtcNow)
-            return Result<bool>.Failure("Código inválido o expirado.", "INVALID_RESET_CODE");
+        if (user is null || user.PasswordResetCodeExpiry < DateTime.UtcNow)
+            return Result<bool>.Failure("Solicitud inválida o expirada.", "INVALID_RESET_CODE");
 
-        var removeResult = await _userManager.RemovePasswordAsync(user);
-        if (!removeResult.Succeeded)
-            return Result<bool>.Failure("Error al restablecer la contraseña.", "RESET_FAILED");
-
-        var addResult = await _userManager.AddPasswordAsync(user, request.NewPassword);
-        if (!addResult.Succeeded)
+        var result = await _userManager.ResetPasswordAsync(user, user.PasswordResetCode ?? "", request.NewPassword);
+        if (!result.Succeeded)
         {
-            var errors = string.Join("; ", addResult.Errors.Select(e => e.Description));
+            var errors = string.Join("; ", result.Errors.Select(e => e.Description));
             return Result<bool>.Failure(errors, "RESET_FAILED");
         }
 

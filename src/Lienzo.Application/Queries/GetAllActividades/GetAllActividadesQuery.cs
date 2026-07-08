@@ -24,7 +24,9 @@ public class GetAllActividadesQueryHandler : IRequestHandler<GetAllActividadesQu
 
     public async Task<Result<List<ActividadDto>>> Handle(GetAllActividadesQuery query, CancellationToken ct)
     {
-        var items = await _unitOfWork.Actividades.GetAllWithDetailsAsync();
+        var items = (await _unitOfWork.Actividades.GetAllWithDetailsAsync())
+            .Where(a => a.Periodo is not null && a.Periodo.IsActive && !a.Periodo.IsDeleted)
+            .ToList();
         var userIds = items.SelectMany(a => a.Docentes.Select(d => d.DocenteId)).Distinct().ToList();
 
         var userNames = new Dictionary<string, string>();

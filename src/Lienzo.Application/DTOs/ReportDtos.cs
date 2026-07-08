@@ -98,3 +98,14 @@ public record ClassroomTimelineResponse(
     List<ClassroomTimelineItem> Items,
     List<string> Dates,
     int TotalReservations);
+
+public record BedeliaReportResponse(
+    int TotalDeliveries,
+    int ActiveDeliveries,
+    int ReturnedDeliveries,
+    List<BedeliaAccessorySummary> TopAccessories,
+    List<BedeliaClassroomSummary> ByClassroom);
+
+public record BedeliaAccessorySummary(string Name, int DeliveryCount);
+
+public record BedeliaClassroomSummary(string ClassroomName, string? BuildingName, int DeliveryCount, int ActiveCount);

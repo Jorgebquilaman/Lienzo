@@ -1,9 +1,11 @@
-using Lienzo.Application.Commands.Login;
-using Lienzo.Application.Commands.Register;
-using Lienzo.Application.Commands.RefreshToken;
+using Lienzo.Application.Commands.ChangePassword;
 using Lienzo.Application.Commands.ForgotPassword;
+using Lienzo.Application.Commands.Login;
+using Lienzo.Application.Commands.RefreshToken;
+using Lienzo.Application.Commands.Register;
 using Lienzo.Application.Commands.ResetPassword;
 using Lienzo.Application.DTOs;
+using Lienzo.Application.Interfaces;
 using Lienzo.Application.Queries.GetCurrentUser;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,6 +14,14 @@ namespace Lienzo.API.Controllers;
 
 public class AuthController : BaseApiController
 {
+    [Authorize]
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request, [FromServices] ICurrentUserService currentUser)
+    {
+        var result = await Mediator.Send(new ChangePasswordCommand(currentUser.UserId, request));
+        return HandleResult(result);
+    }
+
     [AllowAnonymous]
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
@@ -49,6 +59,8 @@ public class AuthController : BaseApiController
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
     {
         var result = await Mediator.Send(new ForgotPasswordCommand(request));
+        if (result.IsSuccess)
+            return Ok(new { message = result.Value });
         return HandleResult(result);
     }
 

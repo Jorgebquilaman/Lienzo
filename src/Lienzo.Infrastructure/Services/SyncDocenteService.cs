@@ -30,21 +30,29 @@ public class SyncDocenteService : ISyncDocenteService
         // Get all external actividades with docente names
         var external = await _syncService.GetActividadesAsync(anioAcademico);
 
-        // Collect unique docente names
-        var uniqueNames = external
-            .SelectMany(e => e.DocenteNames)
-            .Select(n => n.Trim())
-            .Where(n => !string.IsNullOrWhiteSpace(n))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        // Collect unique docente names with their emails
+        var uniqueDocentes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var item in external)
+        {
+            foreach (var name in item.DocenteNames)
+            {
+                var trimmed = name.Trim();
+                if (string.IsNullOrWhiteSpace(trimmed)) continue;
+                if (!uniqueDocentes.ContainsKey(trimmed))
+                {
+                    var email = item.DocenteEmails.TryGetValue(trimmed, out var e) ? e : string.Empty;
+                    uniqueDocentes[trimmed] = email;
+                }
+            }
+        }
 
-        _logger.LogInformation("Found {Count} unique docente names for year {Year}", uniqueNames.Count, anioAcademico);
+        _logger.LogInformation("Found {Count} unique docente names for year {Year}", uniqueDocentes.Count, anioAcademico);
 
-        foreach (var name in uniqueNames)
+        foreach (var kvp in uniqueDocentes)
         {
             try
             {
-                var success = await CreateUserIfNeededAsync(name);
+                var success = await CreateUserIfNeededAsync(kvp.Key, kvp.Value);
                 if (success)
                     result.Creados++;
                 else
@@ -52,8 +60,8 @@ public class SyncDocenteService : ISyncDocenteService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating user for docente '{Name}'", name);
-                result.NombresErroneos.Add(name);
+                _logger.LogError(ex, "Error creating user for docente '{Name}'", kvp.Key);
+                result.NombresErroneos.Add(kvp.Key);
             }
         }
 
@@ -61,7 +69,7 @@ public class SyncDocenteService : ISyncDocenteService
         return result;
     }
 
-    private async Task<bool> CreateUserIfNeededAsync(string fullName)
+    private async Task<bool> CreateUserIfNeededAsync(string fullName, string emailFromDb)
     {
         var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length < 2)
@@ -69,7 +77,7 @@ public class SyncDocenteService : ISyncDocenteService
 
         var lastName = Capitalize(parts[^1]);
         var firstName = string.Join(" ", parts.Take(parts.Length - 1).Select(Capitalize));
-        var email = $"{parts[0]}.{parts[^1]}@lienzo.edu".ToLowerInvariant();
+        var email = emailFromDb ?? $"{parts[0]}.{parts[^1]}@lienzo.edu".ToLowerInvariant();
         email = NormalizeEmail(email);
 
         using var scope = _scopeFactory.CreateScope();

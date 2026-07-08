@@ -172,9 +172,9 @@ export default function TVDashboard() {
     refetchInterval: 30000,
   });
 
-  const scheduleQuery = useQuery<ReservationDto[]>({
+  const scheduleQuery = useQuery<{ reservations: ReservationDto[] }>({
     queryKey: ['tv-schedule', todayStr],
-    queryFn: () => api.get<ReservationDto[]>('/public/schedule', {
+    queryFn: () => api.get<{ reservations: ReservationDto[] }>('/public/schedule', {
       fromDate: `${todayStr}T00:00:00`,
       toDate: `${todayStr}T23:59:59`,
     }),
@@ -182,7 +182,7 @@ export default function TVDashboard() {
   });
 
   const buildings = campusQuery.data?.buildings ?? [];
-  const reservations = scheduleQuery.data ?? [];
+  const reservations = scheduleQuery.data?.reservations ?? [];
 
   const buildingsWithClassrooms = useMemo(
     () => buildings.filter((b) => b.floors.some((f) => f.classrooms.length > 0)),
@@ -537,6 +537,22 @@ function ScheduleView({ reservations, theme, isPortrait }: { reservations: Reser
   const currentTime = format(new Date(), 'HH:mm');
   const upcoming = reservations.filter((r) => r.endTime > currentTime);
 
+  const statusColors: Record<string, string> = {
+    Approved: theme === 'dark' ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-700',
+    Pending: theme === 'dark' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-yellow-100 text-yellow-700',
+    Rejected: theme === 'dark' ? 'bg-red-500/20 text-red-400' : 'bg-red-100 text-red-700',
+    Cancelled: theme === 'dark' ? 'bg-gray-500/20 text-gray-400' : 'bg-gray-100 text-gray-600',
+    Completed: theme === 'dark' ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-700',
+  };
+
+  const statusLabels: Record<string, string> = {
+    Approved: 'Aprobada',
+    Pending: 'Pendiente',
+    Rejected: 'Rechazada',
+    Cancelled: 'Cancelada',
+    Completed: 'Completada',
+  };
+
   if (!upcoming.length) {
     return (
       <div className={`flex flex-col items-center justify-center h-full text-2xl ${theme === 'dark' ? 'text-white/40' : 'text-gray-400'}`}>
@@ -551,37 +567,45 @@ function ScheduleView({ reservations, theme, isPortrait }: { reservations: Reser
       <div className={isPortrait ? 'space-y-2' : 'space-y-3'}>
         {upcoming.map((r) => {
           const isActive = r.startTime <= currentTime && r.endTime > currentTime;
-          const activeStyle = isActive
-            ? `${theme === 'dark' ? 'bg-green-500/15 border-green-500/40 ring-1 ring-green-500/30' : 'bg-green-100 border-green-400 ring-1 ring-green-300'}`
-            : `${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`;
           return (
             <div
               key={r.id}
-              className={`flex items-center rounded-xl border transition-colors ${activeStyle} ${isPortrait ? 'gap-3 p-3' : 'gap-4 p-5'}`}
+              className={`rounded-xl border ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200'} ${isPortrait ? 'p-3' : 'p-4'}`}
             >
-              <div className={`flex flex-col items-center ${isPortrait ? 'min-w-[60px]' : 'min-w-[100px]'}`}>
-                <span className={`font-mono font-bold ${isActive ? 'text-green-600' : theme === 'dark' ? 'text-white/70' : 'text-gray-700'} ${isPortrait ? 'text-lg' : 'text-2xl'}`}>
-                  {r.startTime.slice(0, 5)}
-                </span>
-                <span className={`text-sm ${theme === 'dark' ? 'text-white/40' : 'text-gray-400'} ${isPortrait ? 'text-xs' : 'text-sm'}`}>{r.endTime.slice(0, 5)}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className={`flex items-center gap-2 ${isPortrait ? 'gap-1 flex-wrap' : 'gap-3'}`}>
-                  <span className={`font-bold truncate ${theme === 'dark' ? 'text-white' : 'text-gray-900'} ${isPortrait ? 'text-base' : 'text-xl'}`}>{r.title}</span>
-                  {isActive && (
-                    <span className="px-2 py-0.5 rounded-full bg-green-500/20 text-green-600 text-xs font-semibold shrink-0">
-                      AHORA
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`font-bold truncate ${theme === 'dark' ? 'text-white' : 'text-gray-900'} ${isPortrait ? 'text-base' : 'text-xl'}`}>
+                      {r.title}
                     </span>
-                  )}
-                  {r.actividadNombre && (
-                    <span className={`truncate ${isPortrait ? 'text-sm' : 'text-lg'} ${theme === 'dark' ? 'text-white/60' : 'text-gray-500'}`}>{r.actividadNombre}</span>
+                    {isActive && (
+                      <span className="px-2 py-0.5 rounded-full bg-green-500/20 text-green-600 text-xs font-semibold shrink-0">
+                        AHORA
+                      </span>
+                    )}
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold shrink-0 ${statusColors[r.status] || ''}`}>
+                      {statusLabels[r.status] || r.status}
+                    </span>
+                  </div>
+                  <div className={`flex items-center gap-2 mt-1 ${theme === 'dark' ? 'text-white/60' : 'text-gray-600'} ${isPortrait ? 'text-xs' : 'text-sm'}`}>
+                    <span className="font-medium">{r.classroomName}</span>
+                    {r.buildingName && <><span>·</span><span>{r.buildingName}</span></>}
+                  </div>
+                  <div className={`flex items-center gap-2 mt-0.5 ${theme === 'dark' ? 'text-white/40' : 'text-gray-500'} ${isPortrait ? 'text-xs' : 'text-sm'}`}>
+                    <span>{r.startTime.slice(0, 5)} - {r.endTime.slice(0, 5)}</span>
+                    {r.actividadNombre && <><span>·</span><span>{r.actividadNombre}</span></>}
+                  </div>
+                  {r.actividadDocentes && (
+                    <div className={`mt-0.5 ${theme === 'dark' ? 'text-white/40' : 'text-gray-400'} ${isPortrait ? 'text-xs' : 'text-sm'}`}>
+                      {r.actividadDocentes}
+                    </div>
                   )}
                 </div>
-                <div className={`flex items-center gap-2 mt-0.5 ${theme === 'dark' ? 'text-white/50' : 'text-gray-500'} ${isPortrait ? 'text-xs flex-wrap' : 'text-base gap-4'}`}>
-                  <span>{r.classroomName}</span>
-                  {r.buildingName && <span>· {r.buildingName}</span>}
-                  {r.userName && <span>· {r.userName}</span>}
-                  {r.actividadDocentes && <span>· {r.actividadDocentes}</span>}
+                <div className={`flex flex-col items-end ${isPortrait ? 'min-w-[50px]' : 'min-w-[80px]'}`}>
+                  <span className={`font-mono font-bold ${isActive ? 'text-green-500' : theme === 'dark' ? 'text-white/70' : 'text-gray-700'} ${isPortrait ? 'text-base' : 'text-xl'}`}>
+                    {r.startTime.slice(0, 5)}
+                  </span>
+                  <span className={`${theme === 'dark' ? 'text-white/30' : 'text-gray-400'} ${isPortrait ? 'text-xs' : 'text-sm'}`}>{r.endTime.slice(0, 5)}</span>
                 </div>
               </div>
             </div>

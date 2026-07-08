@@ -91,6 +91,7 @@ export interface Reservation {
   actividadPeriodo?: string;
   actividadCarrera?: string;
   actividadDocentes?: string;
+  actividadDocenteIds?: string[];
 }
 
 export interface Announcement {
@@ -153,6 +154,38 @@ export interface ApiError {
 export interface ReservationConflict {
   hasConflict: boolean;
   conflictingReservations: Reservation[];
+}
+
+export interface MaintenanceBlock {
+  id: string;
+  classroomId: string;
+  classroomName: string;
+  buildingName?: string;
+  startTime: string;
+  endTime: string;
+  reason: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface ScheduleResponse {
+  reservations: Reservation[];
+  maintenanceBlocks: MaintenanceBlock[];
+}
+
+export interface Actividad {
+  id: string;
+  nombre: string;
+  codigoMateria: string;
+  periodoNombre?: string;
+  carreraNombre?: string;
+  aulaId?: string;
+  aulaNombre?: string;
+  diaSemana?: string;
+  horaInicio?: string;
+  horaFin?: string;
+  docenteIds: string[];
+  docentesNombres?: string;
 }
 
 export interface DashboardStats {
