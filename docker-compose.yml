@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16
@@ -9,7 +7,7 @@ services:
       POSTGRES_USER: lienzo
       POSTGRES_PASSWORD: lienzo123
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -47,7 +45,7 @@ services:
       JwtSettings__ExpirationInMinutes: "60"
       JwtSettings__RefreshTokenExpirationInDays: "7"
     ports:
-      - "5000:8080"
+      - "5001:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -60,7 +58,7 @@ services:
       dockerfile: Dockerfile
     container_name: lienzo-web
     ports:
-      - "3000:80"
+      - "3001:80"
     depends_on:
       - lienzo-api
     networks:

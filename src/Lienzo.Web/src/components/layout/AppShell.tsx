@@ -41,15 +41,20 @@ import { useNotificationStore } from '@/stores/notificationStore';
 import { useLogout } from '@/hooks/useAuth';
 import { NotificationPanel } from '@/components/notifications/NotificationPanel';
 
-const navItems = [
-  { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/classrooms', label: 'Aulas', icon: DoorOpen },
-  { path: '/reservations', label: 'Reservaciones', icon: CalendarCheck },
-  { path: '/schedule', label: 'Horario', icon: CalendarDays },
-  { path: '/asistencias', label: 'Asistencias', icon: ClipboardCheck },
-  { path: '/announcements', label: 'Anuncios', icon: Megaphone },
-  { path: '/surveys', label: 'Mis Encuestas', icon: Star },
-];
+const getNavItems = (role?: string) => {
+  const items = [
+    { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/classrooms', label: 'Aulas', icon: DoorOpen },
+    { path: '/reservations', label: 'Reservaciones', icon: CalendarCheck },
+    { path: '/schedule', label: 'Horario', icon: CalendarDays },
+    { path: '/announcements', label: 'Anuncios', icon: Megaphone },
+    { path: '/surveys', label: 'Mis Encuestas', icon: Star },
+  ];
+  if (role !== 'Student') {
+    items.splice(4, 0, { path: '/asistencias', label: 'Asistencias', icon: ClipboardCheck });
+  }
+  return items;
+};
 
 const isSuperAdmin = (user: { email?: string } | null) => user?.email === 'admin@lienzo.edu';
 
@@ -87,7 +92,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <nav className="hidden lg:flex items-center gap-1">
-            {navItems.map((item) => (
+            {getNavItems(user?.role).map((item) => (
               <Link
                 key={item.path}
                 to={item.path}
@@ -231,7 +236,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <nav className="fixed bottom-0 left-0 right-0 z-40 h-16 bg-white border-t border-primary-100 lg:hidden">
         <div className="flex items-center justify-around h-full px-2">
-          {navItems.map((item) => (
+          {getNavItems(user?.role).map((item) => (
             <Link
               key={item.path}
               to={item.path}
