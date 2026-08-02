@@ -88,17 +88,36 @@ public class ReservationAccessoriesController : ControllerBase
     {
         var reservation = await _unitOfWork.Reservations.Query()
             .Include(r => r.Classroom)
+            .ThenInclude(c => c.Building)
+            .Include(r => r.Classroom.ClassroomAccessories)
+            .ThenInclude(ca => ca.Accessory)
             .Include(r => r.ReservationAccessories)
             .FirstOrDefaultAsync(r => r.Id == reservationId && !r.IsDeleted);
 
         if (reservation is null)
             return NotFound(new ProblemDetails { Title = "Reserva no encontrada.", Status = 404 });
 
-        if (!reservation.RequiresAccessoryConfirmation)
-            return BadRequest(new ProblemDetails { Title = "Esta reserva no requiere confirmación de accesorios.", Status = 400 });
-
         if (reservation.AccessoriesConfirmedAt.HasValue)
             return BadRequest(new ProblemDetails { Title = "La confirmación ya fue recibida.", Status = 400 });
+
+        if (!reservation.RequiresAccessoryConfirmation)
+        {
+            var classroomAccessories = reservation.Classroom.ClassroomAccessories
+                .Where(ca => ca.Accessory is { IsActive: true })
+                .Select(ca => (ca.Accessory.Name, Origin: Lienzo.Domain.Enums.AccessoryOrigin.Catalog))
+                .ToList();
+
+            var featureAccessories = reservation.Classroom.Features
+                .Select(f => (f, Origin: Lienzo.Domain.Enums.AccessoryOrigin.Feature))
+                .ToList();
+
+            var allAccessories = classroomAccessories.Concat(featureAccessories).ToList();
+            if (allAccessories.Count == 0)
+                return BadRequest(new ProblemDetails { Title = "El aula no tiene accesorios configurados. Asigná accesorios al aula para poder enviar la confirmación.", Status = 400 });
+
+            reservation.RequireAccessoryConfirmation(Guid.NewGuid().ToString("N"), allAccessories);
+            await _unitOfWork.SaveChangesAsync();
+        }
 
         try
         {

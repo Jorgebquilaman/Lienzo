@@ -212,7 +212,7 @@ export default function AdminEmails() {
                       Crear Reserva
                     </Button>
                   )}
-                  {selected.isProcessed && selected.reservationId && selected.requiresAccessoryConfirmation && !selected.accessoriesConfirmed && (
+                  {selected.isProcessed && selected.reservationId && !selected.accessoriesConfirmed && (
                     <Button
                       variant="accent"
                       size="sm"
