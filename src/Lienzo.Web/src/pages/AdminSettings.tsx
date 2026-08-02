@@ -15,6 +15,8 @@ export default function AdminSettings() {
   const [password, setPassword] = useState('');
   const [fromAddress, setFromAddress] = useState('');
   const [fromName, setFromName] = useState('');
+  const [imapHost, setImapHost] = useState('imap.gmail.com');
+  const [imapPort, setImapPort] = useState('993');
   const [testEmail, setTestEmail] = useState('');
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
 
@@ -37,6 +39,8 @@ export default function AdminSettings() {
         password: string;
         fromAddress: string;
         fromName: string;
+        imapHost: string;
+        imapPort: string;
       }>('/settings/email');
       setSmtpHost(data.smtpHost);
       setSmtpPort(data.smtpPort);
@@ -44,6 +48,8 @@ export default function AdminSettings() {
       setPassword(data.password);
       setFromAddress(data.fromAddress);
       setFromName(data.fromName);
+      setImapHost(data.imapHost);
+      setImapPort(data.imapPort);
       return data;
     },
   });
@@ -67,6 +73,8 @@ export default function AdminSettings() {
       password: string;
       fromAddress: string;
       fromName: string;
+      imapHost: string;
+      imapPort: string;
     }) => api.put('/settings/email', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['settings', 'email'] });
@@ -158,6 +166,18 @@ export default function AdminSettings() {
               value={fromName}
               onChange={(e) => setFromName(e.target.value)}
             />
+            <Input
+              label="Servidor IMAP"
+              placeholder="imap.gmail.com"
+              value={imapHost}
+              onChange={(e) => setImapHost(e.target.value)}
+            />
+            <Input
+              label="Puerto IMAP"
+              placeholder="993"
+              value={imapPort}
+              onChange={(e) => setImapPort(e.target.value)}
+            />
           </div>
           <p className="text-xs text-primary-400">
             Usá una contraseña de aplicación de Gmail (no tu contraseña personal). 
@@ -176,6 +196,8 @@ export default function AdminSettings() {
                   password,
                   fromAddress,
                   fromName,
+                  imapHost,
+                  imapPort,
                 })
               }
               disabled={saveEmailMutation.isPending}

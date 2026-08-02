@@ -29,6 +29,7 @@ import AdminSurveys from '@/pages/AdminSurveys';
 import AdminSettings from '@/pages/AdminSettings';
 import AdminBedelia from '@/pages/AdminBedelia';
 import AdminAccesorios from '@/pages/AdminAccesorios';
+import AdminEmails from '@/pages/AdminEmails';
 import AnnouncementsPage from '@/pages/AnnouncementsPage';
 import MySurveys from '@/pages/MySurveys';
 import ProfilePage from '@/pages/ProfilePage';
@@ -277,6 +278,14 @@ export default function App() {
           element={
             <AppShell>
               <AdminAccesorios />
+            </AppShell>
+          }
+        />
+        <Route
+          path="/admin/emails"
+          element={
+            <AppShell>
+              <AdminEmails />
             </AppShell>
           }
         />

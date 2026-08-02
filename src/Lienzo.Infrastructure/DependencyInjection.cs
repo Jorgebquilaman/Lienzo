@@ -121,6 +121,8 @@ public static class DependencyInjection
         services.AddScoped<ISgaAsistenciaService, SgaAsistenciaService>();
         services.AddScoped<ISystemSettingService, SystemSettingService>();
         services.AddScoped<IEmailService, EmailService>();
+        services.AddScoped<IEmailReaderService, EmailReaderService>();
+        services.AddScoped<IEmailEvidenceStorage, EmailEvidenceStorage>();
 
         services.AddScoped<IRepository<ReservationReminder>, GenericRepository<ReservationReminder>>();
 

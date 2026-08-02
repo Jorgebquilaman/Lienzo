@@ -41,6 +41,8 @@ public class SettingsController : BaseApiController
             password = await _settings.GetValueAsync("EmailPassword") ?? "",
             fromAddress = await _settings.GetValueAsync("EmailFromAddress") ?? "",
             fromName = await _settings.GetValueAsync("EmailFromName") ?? "",
+            imapHost = await _settings.GetValueAsync("EmailImapHost") ?? "imap.gmail.com",
+            imapPort = await _settings.GetValueAsync("EmailImapPort") ?? "993",
         };
         return Ok(settings);
     }
@@ -54,6 +56,8 @@ public class SettingsController : BaseApiController
         await _settings.SetValueAsync("EmailPassword", request.Password);
         await _settings.SetValueAsync("EmailFromAddress", request.FromAddress);
         await _settings.SetValueAsync("EmailFromName", request.FromName);
+        await _settings.SetValueAsync("EmailImapHost", request.ImapHost);
+        await _settings.SetValueAsync("EmailImapPort", request.ImapPort);
         return Ok(new { message = "Configuración de email guardada correctamente" });
     }
 
@@ -73,6 +77,6 @@ public class SettingsController : BaseApiController
     }
 
     public record SetPublicUrlRequest(string Url);
-    public record EmailSettingsRequest(string SmtpHost, string SmtpPort, string Username, string Password, string FromAddress, string FromName);
+    public record EmailSettingsRequest(string SmtpHost, string SmtpPort, string Username, string Password, string FromAddress, string FromName, string ImapHost, string ImapPort);
     public record TestEmailRequest(string To);
 }

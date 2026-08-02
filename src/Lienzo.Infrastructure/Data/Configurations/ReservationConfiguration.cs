@@ -57,6 +57,25 @@ public class ReservationConfiguration : IEntityTypeConfiguration<Reservation>
             .HasColumnName("regla_recurrencia")
             .HasMaxLength(500);
 
+        builder.Property(e => e.SourceEmailUid)
+            .HasColumnName("email_origen_uid")
+            .HasMaxLength(100);
+
+        builder.Property(e => e.SourceEmailFrom)
+            .HasColumnName("email_origen_remitente")
+            .HasMaxLength(500);
+
+        builder.Property(e => e.SourceEmailSubject)
+            .HasColumnName("email_origen_asunto")
+            .HasMaxLength(500);
+
+        builder.Property(e => e.SourceEmailDate)
+            .HasColumnName("email_origen_fecha");
+
+        builder.Property(e => e.EvidenceFilePath)
+            .HasColumnName("email_evidencia_path")
+            .HasMaxLength(500);
+
         builder.Property(e => e.CreatedAt)
             .HasColumnName("creado_en")
             .IsRequired();

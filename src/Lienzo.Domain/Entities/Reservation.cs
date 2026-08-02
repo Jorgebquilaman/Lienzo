@@ -19,6 +19,11 @@ public class Reservation : BaseEntity
     public Guid? RecurringGroupId { get; private set; }
     public string? RecurrenceRule { get; private set; }
     public Guid? ActividadId { get; private set; }
+    public string? SourceEmailUid { get; private set; }
+    public string? SourceEmailFrom { get; private set; }
+    public string? SourceEmailSubject { get; private set; }
+    public DateTime? SourceEmailDate { get; private set; }
+    public string? EvidenceFilePath { get; private set; }
 
     private Reservation() { }
 
@@ -32,7 +37,12 @@ public class Reservation : BaseEntity
         TimeOnly endTime,
         Guid? recurringGroupId = null,
         string? recurrenceRule = null,
-        Guid? actividadId = null)
+        Guid? actividadId = null,
+        string? sourceEmailUid = null,
+        string? sourceEmailFrom = null,
+        string? sourceEmailSubject = null,
+        DateTime? sourceEmailDate = null,
+        string? evidenceFilePath = null)
     {
         if (startTime >= endTime)
             throw new ArgumentException("Start time must be before end time.");
@@ -52,6 +62,11 @@ public class Reservation : BaseEntity
         RecurringGroupId = recurringGroupId;
         RecurrenceRule = recurrenceRule;
         ActividadId = actividadId;
+        SourceEmailUid = sourceEmailUid;
+        SourceEmailFrom = sourceEmailFrom;
+        SourceEmailSubject = sourceEmailSubject;
+        SourceEmailDate = sourceEmailDate;
+        EvidenceFilePath = evidenceFilePath;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
 
@@ -75,9 +90,14 @@ public class Reservation : BaseEntity
         TimeOnly endTime,
         Guid? recurringGroupId = null,
         string? recurrenceRule = null,
-        Guid? actividadId = null)
+        Guid? actividadId = null,
+        string? sourceEmailUid = null,
+        string? sourceEmailFrom = null,
+        string? sourceEmailSubject = null,
+        DateTime? sourceEmailDate = null,
+        string? evidenceFilePath = null)
     {
-        return new Reservation(classroomId, userId, title, description, date, startTime, endTime, recurringGroupId, recurrenceRule, actividadId);
+        return new Reservation(classroomId, userId, title, description, date, startTime, endTime, recurringGroupId, recurrenceRule, actividadId, sourceEmailUid, sourceEmailFrom, sourceEmailSubject, sourceEmailDate, evidenceFilePath);
     }
 
     public void Approve(Guid adminId)

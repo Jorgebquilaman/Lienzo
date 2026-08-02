@@ -24,9 +24,12 @@ public class ReservationDto
     public string? ActividadCarrera { get; set; }
     public string? ActividadDocentes { get; set; }
     public List<string>? ActividadDocenteIds { get; set; }
+    public string? EvidenceFilePath { get; set; }
 }
 
 public record CreateReservationRequest(Guid ClassroomId, string Title, string? Description, DateOnly Date, TimeOnly StartTime, TimeOnly EndTime, string? DaysOfWeek = null, DateOnly? EndDate = null, Guid? ActividadId = null);
+
+public record CreateReservationFromEmailRequest(string EmailUid, Guid AssignedUserId, Guid ClassroomId, string Title, string? Description, DateOnly Date, TimeOnly StartTime, TimeOnly EndTime, string? DaysOfWeek = null, DateOnly? EndDate = null, Guid? ActividadId = null);
 
 public record UpdateReservationRequest(string? Title, string? Description);
 

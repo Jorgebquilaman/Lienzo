@@ -31,6 +31,7 @@ import {
   KeyRound,
   Package,
   CalendarOff,
+  Mail,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
@@ -191,6 +192,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <nav className="space-y-1">
             {[
               { path: '/admin/reservations', label: 'Reservaciones', icon: CalendarCheck },
+              { path: '/admin/emails', label: 'Correo', icon: Mail },
               { path: '/admin/classrooms', label: 'Aulas', icon: DoorOpen },
               { path: '/admin/buildings', label: 'Edificios', icon: Building2 },
               { path: '/admin/bedelia', label: 'Bedelía', icon: KeyRound },
