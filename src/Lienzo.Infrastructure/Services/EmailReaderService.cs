@@ -137,6 +137,11 @@ public class EmailReaderService : IEmailReaderService
                 .ToList();
 
             var sender = message.From.Mailboxes.FirstOrDefault();
+
+            var reservation = await _unitOfWork.Reservations.Query()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(r => r.SourceEmailUid == uid && !r.IsDeleted, ct);
+
             return Result<EmailMessageDetailDto>.Success(new EmailMessageDetailDto(
                 uid,
                 sender?.Address ?? "",
@@ -148,7 +153,10 @@ public class EmailReaderService : IEmailReaderService
                 processedUids.Contains(uid),
                 message.TextBody,
                 message.HtmlBody,
-                attachments));
+                attachments,
+                reservation?.Id,
+                reservation?.RequiresAccessoryConfirmation ?? false,
+                reservation?.AccessoriesConfirmedAt.HasValue ?? false));
         }
         catch (Exception ex)
         {

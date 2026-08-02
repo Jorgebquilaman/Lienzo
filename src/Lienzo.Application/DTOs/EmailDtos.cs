@@ -24,7 +24,10 @@ public record EmailMessageDetailDto(
     bool IsProcessed,
     string? BodyText,
     string? BodyHtml,
-    List<EmailAttachmentDto> Attachments);
+    List<EmailAttachmentDto> Attachments,
+    Guid? ReservationId,
+    bool RequiresAccessoryConfirmation,
+    bool AccessoriesConfirmed);
 
 public record EmailProcessedInfoDto(
     string EmailUid,

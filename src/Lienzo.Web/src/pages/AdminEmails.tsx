@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Mail, MailOpen, Inbox, Download, CalendarPlus, Paperclip, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Mail, MailOpen, Inbox, Download, CalendarPlus, Paperclip, ClipboardCheck, ChevronLeft, ChevronRight } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
@@ -47,6 +47,9 @@ interface EmailDetail {
   bodyText?: string;
   bodyHtml?: string;
   attachments: { name: string; contentType: string; size: number }[];
+  reservationId?: string | null;
+  requiresAccessoryConfirmation?: boolean;
+  accessoriesConfirmed?: boolean;
 }
 
 export default function AdminEmails() {
@@ -56,6 +59,7 @@ export default function AdminEmails() {
   const [selected, setSelected] = useState<EmailDetail | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [resending, setResending] = useState(false);
 
   const { data: response, isLoading } = useQuery({
     queryKey: ['emails', page],
@@ -93,6 +97,18 @@ export default function AdminEmails() {
       URL.revokeObjectURL(url);
     } catch (err: any) {
       alert(err?.message || 'Error al descargar el correo');
+    }
+  };
+
+  const resendAccessoryConfirmation = async (reservationId: string) => {
+    setResending(true);
+    try {
+      await api.post(`/reservations/${reservationId}/accessories/resend`);
+      alert('Se envió el correo de confirmación de accesorios al solicitante.');
+    } catch (err: any) {
+      alert(err?.message || 'Error al enviar el correo de confirmación');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -196,6 +212,17 @@ export default function AdminEmails() {
                       Crear Reserva
                     </Button>
                   )}
+                  {selected.isProcessed && selected.reservationId && selected.requiresAccessoryConfirmation && !selected.accessoriesConfirmed && (
+                    <Button
+                      variant="accent"
+                      size="sm"
+                      loading={resending}
+                      onClick={() => resendAccessoryConfirmation(selected.reservationId!)}
+                    >
+                      <ClipboardCheck className="h-4 w-4 mr-1" />
+                      Solicitar confirmación de accesorios
+                    </Button>
+                  )}
                   <Button variant="ghost" size="sm" onClick={() => downloadRaw(selected.uid)}>
                     <Download className="h-4 w-4 mr-1" />
                     .eml
@@ -221,6 +248,11 @@ export default function AdminEmails() {
                   </div>
                   {selected.isProcessed && (
                     <Badge variant="approved">Ya procesado para una reserva</Badge>
+                  )}
+                  {selected.requiresAccessoryConfirmation && (
+                    <Badge variant={selected.accessoriesConfirmed ? 'approved' : 'pending'}>
+                      {selected.accessoriesConfirmed ? 'Accesorios confirmados' : 'Pendiente confirmación de accesorios'}
+                    </Badge>
                   )}
                   {selected.attachments.length > 0 && (
                     <div className="text-xs text-primary-500">
