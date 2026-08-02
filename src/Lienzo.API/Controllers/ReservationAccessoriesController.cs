@@ -16,17 +16,20 @@ public class ReservationAccessoriesController : ControllerBase
     private readonly IEmailService _emailService;
     private readonly ISystemSettingService _settings;
     private readonly IAuthService _authService;
+    private readonly IReservationPdfGenerator _pdfGenerator;
 
     public ReservationAccessoriesController(
         IUnitOfWork unitOfWork,
         IEmailService emailService,
         ISystemSettingService settings,
-        IAuthService authService)
+        IAuthService authService,
+        IReservationPdfGenerator pdfGenerator)
     {
         _unitOfWork = unitOfWork;
         _emailService = emailService;
         _settings = settings;
         _authService = authService;
+        _pdfGenerator = pdfGenerator;
     }
 
     [HttpGet]
@@ -97,30 +100,52 @@ public class ReservationAccessoriesController : ControllerBase
         if (reservation.AccessoriesConfirmedAt.HasValue)
             return BadRequest(new ProblemDetails { Title = "La confirmación ya fue recibida.", Status = 400 });
 
-        var usersResult = await _authService.GetAllUsersAsync();
-        var userEmail = usersResult.IsSuccess
-            ? usersResult.Value.FirstOrDefault(u => u.Id == reservation.UserId)?.Email
-            : null;
-        if (string.IsNullOrEmpty(userEmail))
-            return BadRequest(new ProblemDetails { Title = "No se pudo obtener el correo del solicitante.", Status = 400 });
-
-        var publicUrl = await _settings.GetValueAsync("PublicUrl") ?? "";
-        var baseUrl = string.IsNullOrEmpty(publicUrl) ? "" : publicUrl.TrimEnd('/');
-        var link = $"{baseUrl}/confirm-accessories?token={Uri.EscapeDataString(reservation.AccessoryConfirmationToken!)}";
-
-        var listItems = string.Join("", reservation.ReservationAccessories.Select(a => $"<li>{a.Name}</li>"));
-        var body = $"""
-            <h1>Confirmación de accesorios - Lienzo</h1>
-            <p>Tu reserva para el <strong>{reservation.Date:dd/MM/yyyy}</strong> de {reservation.StartTime:hh\:mm} a {reservation.EndTime:hh\:mm} en <strong>{reservation.Classroom.Name}</strong> está pendiente de aprobación.</p>
-            <p>Para que podamos confirmar la disponibilidad, marcá cuáles de los siguientes accesorios vas a necesitar:</p>
-            <ul>{listItems}</ul>
-            <p><a href='{link}'>Confirmar accesorios</a></p>
-            <p>Si no necesitás ningún accesorio, igualmente confirmá para poder habilitar la reserva.</p>
-            """;
-
         try
         {
-            await _emailService.SendAsync(userEmail, $"Confirmá los accesorios para tu reserva - {reservation.Classroom.Name}", body);
+            var usersResult = await _authService.GetAllUsersAsync();
+            var requester = usersResult.IsSuccess
+                ? usersResult.Value.FirstOrDefault(u => u.Id == reservation.UserId)
+                : null;
+            var userEmail = requester?.Email;
+            if (string.IsNullOrEmpty(userEmail))
+                return BadRequest(new ProblemDetails { Title = "No se pudo obtener el correo del solicitante.", Status = 400 });
+
+            var userName = requester is null ? "" : $"{requester.FirstName} {requester.LastName}".Trim();
+
+            var publicUrl = await _settings.GetValueAsync("PublicUrl") ?? "";
+            var baseUrl = string.IsNullOrEmpty(publicUrl) ? "" : publicUrl.TrimEnd('/');
+            var link = $"{baseUrl}/confirm-accessories?token={Uri.EscapeDataString(reservation.AccessoryConfirmationToken!)}";
+
+            var listItems = string.Join("", reservation.ReservationAccessories.Select(a => $"<li>{a.Name}</li>"));
+            var body = $"""
+                <h1>Confirmación de accesorios - Lienzo</h1>
+                <p>Tu reserva para el <strong>{reservation.Date:dd/MM/yyyy}</strong> de {reservation.StartTime:hh\:mm} a {reservation.EndTime:hh\:mm} en <strong>{reservation.Classroom.Name}</strong> está pendiente de aprobación.</p>
+                <p>Para que podamos confirmar la disponibilidad, marcá cuáles de los siguientes accesorios vas a necesitar:</p>
+                <ul>{listItems}</ul>
+                <p><a href='{link}'>Confirmar accesorios</a></p>
+                <p>Si no necesitás ningún accesorio, igualmente confirmá para poder habilitar la reserva.</p>
+                <p>Adjuntamos un PDF con el detalle de la reserva.</p>
+                """;
+
+            var pdf = _pdfGenerator.Generate(new ReservationPdfModel
+            {
+                Title = reservation.Title,
+                Description = reservation.Description,
+                UserName = userName,
+                UserEmail = userEmail,
+                ClassroomName = reservation.Classroom.Name,
+                BuildingName = reservation.Classroom.Building?.Name,
+                Floor = reservation.Classroom.Floor,
+                Date = reservation.Date.ToString("dd/MM/yyyy"),
+                StartTime = reservation.StartTime.ToString("hh\\:mm"),
+                EndTime = reservation.EndTime.ToString("hh\\:mm"),
+                Status = "Pendiente",
+                ReservationId = reservation.Id,
+                Accessories = reservation.ReservationAccessories.Select(a => a.Name).ToList()
+            });
+
+            var attachment = new EmailAttachment($"reserva-{reservation.Id:N}.pdf", "application/pdf", pdf);
+            await _emailService.SendAsync(userEmail, $"Confirmá los accesorios para tu reserva - {reservation.Classroom.Name}", body, attachment);
         }
         catch (Exception ex)
         {

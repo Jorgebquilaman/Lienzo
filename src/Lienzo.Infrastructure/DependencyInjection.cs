@@ -123,6 +123,7 @@ public static class DependencyInjection
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IEmailReaderService, EmailReaderService>();
         services.AddScoped<IEmailEvidenceStorage, EmailEvidenceStorage>();
+        services.AddScoped<IReservationPdfGenerator, ReservationPdfGenerator>();
 
         services.AddScoped<IRepository<ReservationReminder>, GenericRepository<ReservationReminder>>();
 

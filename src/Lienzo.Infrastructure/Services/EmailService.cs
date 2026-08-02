@@ -1,3 +1,4 @@
+using Lienzo.Application.DTOs;
 using Lienzo.Application.Interfaces;
 using MailKit.Net.Smtp;
 using MimeKit;
@@ -13,7 +14,7 @@ public class EmailService : IEmailService
         _settings = settings;
     }
 
-    public async Task SendAsync(string to, string subject, string body)
+    public async Task SendAsync(string to, string subject, string body, EmailAttachment? attachment = null)
     {
         var host = await _settings.GetValueAsync("EmailSmtpHost") ?? "smtp.gmail.com";
         var portStr = await _settings.GetValueAsync("EmailSmtpPort") ?? "587";
@@ -34,6 +35,13 @@ public class EmailService : IEmailService
         message.Subject = subject;
 
         var bodyBuilder = new BodyBuilder { HtmlBody = body };
+        if (attachment is not null && attachment.Content.Length > 0)
+        {
+            bodyBuilder.Attachments.Add(
+                attachment.FileName,
+                attachment.Content,
+                ContentType.Parse(attachment.ContentType));
+        }
         message.Body = bodyBuilder.ToMessageBody();
 
         using var client = new SmtpClient();

@@ -160,6 +160,16 @@ public class CreateReservationFromEmailCommandHandler : IRequestHandler<CreateRe
                     evidencePath);
 
                 await _unitOfWork.Reservations.AddAsync(reservation);
+
+                try
+                {
+                    reservation.Approve(_currentUser.UserId);
+                }
+                catch (InvalidOperationException)
+                {
+                    return Result<ReservationDto>.Failure("No se pudo autorizar la reserva automáticamente.", "VALIDATION");
+                }
+
                 reservations.Add(reservation);
             }
             catch (ArgumentException ex)
