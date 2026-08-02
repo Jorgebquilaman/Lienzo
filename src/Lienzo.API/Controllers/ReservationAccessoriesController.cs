@@ -1,0 +1,132 @@
+using Lienzo.Application.DTOs;
+using Lienzo.Application.Interfaces;
+using Lienzo.Domain.Enums;
+using Lienzo.Domain.Interfaces;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+namespace Lienzo.API.Controllers;
+
+[Authorize(Roles = "Admin")]
+[Route("api/reservations/{reservationId:guid}/accessories")]
+public class ReservationAccessoriesController : ControllerBase
+{
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IEmailService _emailService;
+    private readonly ISystemSettingService _settings;
+    private readonly IAuthService _authService;
+
+    public ReservationAccessoriesController(
+        IUnitOfWork unitOfWork,
+        IEmailService emailService,
+        ISystemSettingService settings,
+        IAuthService authService)
+    {
+        _unitOfWork = unitOfWork;
+        _emailService = emailService;
+        _settings = settings;
+        _authService = authService;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetAccessories(Guid reservationId)
+    {
+        var reservation = await _unitOfWork.Reservations.Query()
+            .Include(r => r.Classroom)
+            .Include(r => r.ReservationAccessories)
+            .FirstOrDefaultAsync(r => r.Id == reservationId && !r.IsDeleted);
+
+        if (reservation is null)
+            return NotFound(new ProblemDetails { Title = "Reserva no encontrada.", Status = 404 });
+
+        var dto = new ReservationAccessoriesDto(
+            reservation.Id,
+            reservation.RequiresAccessoryConfirmation,
+            reservation.AccessoriesConfirmedAt.HasValue,
+            reservation.ReservationAccessories
+                .Select(a => new ReservationAccessoryDto(a.Name, a.Origin.ToString(), a.IsRequested, a.IsGranted))
+                .ToList());
+
+        return Ok(dto);
+    }
+
+    [HttpPost("decide")]
+    public async Task<IActionResult> Decide(Guid reservationId, [FromBody] List<DecideAccessoryRequest> decisions)
+    {
+        var reservation = await _unitOfWork.Reservations.Query()
+            .Include(r => r.ReservationAccessories)
+            .FirstOrDefaultAsync(r => r.Id == reservationId && !r.IsDeleted);
+
+        if (reservation is null)
+            return NotFound(new ProblemDetails { Title = "Reserva no encontrada.", Status = 404 });
+
+        if (!reservation.AccessoriesConfirmedAt.HasValue)
+            return BadRequest(new ProblemDetails { Title = "El solicitante aún no confirmó los accesorios.", Status = 400 });
+
+        try
+        {
+            foreach (var decision in decisions)
+                reservation.DecideAccessory(decision.Name, decision.Granted);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new ProblemDetails { Title = ex.Message, Status = 400 });
+        }
+
+        _unitOfWork.Reservations.Update(reservation);
+        await _unitOfWork.SaveChangesAsync();
+
+        return Ok(new { message = "Decisiones de accesorios guardadas correctamente." });
+    }
+
+    [HttpPost("resend")]
+    public async Task<IActionResult> Resend(Guid reservationId)
+    {
+        var reservation = await _unitOfWork.Reservations.Query()
+            .Include(r => r.Classroom)
+            .Include(r => r.ReservationAccessories)
+            .FirstOrDefaultAsync(r => r.Id == reservationId && !r.IsDeleted);
+
+        if (reservation is null)
+            return NotFound(new ProblemDetails { Title = "Reserva no encontrada.", Status = 404 });
+
+        if (!reservation.RequiresAccessoryConfirmation)
+            return BadRequest(new ProblemDetails { Title = "Esta reserva no requiere confirmación de accesorios.", Status = 400 });
+
+        if (reservation.AccessoriesConfirmedAt.HasValue)
+            return BadRequest(new ProblemDetails { Title = "La confirmación ya fue recibida.", Status = 400 });
+
+        var usersResult = await _authService.GetAllUsersAsync();
+        var userEmail = usersResult.IsSuccess
+            ? usersResult.Value.FirstOrDefault(u => u.Id == reservation.UserId)?.Email
+            : null;
+        if (string.IsNullOrEmpty(userEmail))
+            return BadRequest(new ProblemDetails { Title = "No se pudo obtener el correo del solicitante.", Status = 400 });
+
+        var publicUrl = await _settings.GetValueAsync("PublicUrl") ?? "";
+        var baseUrl = string.IsNullOrEmpty(publicUrl) ? "" : publicUrl.TrimEnd('/');
+        var link = $"{baseUrl}/confirm-accessories?token={Uri.EscapeDataString(reservation.AccessoryConfirmationToken!)}";
+
+        var listItems = string.Join("", reservation.ReservationAccessories.Select(a => $"<li>{a.Name}</li>"));
+        var body = $"""
+            <h1>Confirmación de accesorios - Lienzo</h1>
+            <p>Tu reserva para el <strong>{reservation.Date:dd/MM/yyyy}</strong> de {reservation.StartTime:hh\:mm} a {reservation.EndTime:hh\:mm} en <strong>{reservation.Classroom.Name}</strong> está pendiente de aprobación.</p>
+            <p>Para que podamos confirmar la disponibilidad, marcá cuáles de los siguientes accesorios vas a necesitar:</p>
+            <ul>{listItems}</ul>
+            <p><a href='{link}'>Confirmar accesorios</a></p>
+            <p>Si no necesitás ningún accesorio, igualmente confirmá para poder habilitar la reserva.</p>
+            """;
+
+        try
+        {
+            await _emailService.SendAsync(userEmail, $"Confirmá los accesorios para tu reserva - {reservation.Classroom.Name}", body);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new ProblemDetails { Title = $"Error al enviar el correo: {ex.Message}", Status = 400 });
+        }
+
+        return Ok(new { message = "Correo de confirmación reenviado correctamente." });
+    }
+}

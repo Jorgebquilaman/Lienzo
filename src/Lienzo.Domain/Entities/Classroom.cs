@@ -7,6 +7,7 @@ namespace Lienzo.Domain.Entities;
 public class Classroom : BaseEntity
 {
     private readonly List<Reservation> _reservations = [];
+    private readonly List<ClassroomAccessory> _classroomAccessories = [];
 
     public string Name { get; private set; }
     public Guid BuildingId { get; private set; }
@@ -20,6 +21,7 @@ public class Classroom : BaseEntity
     public float? MapPositionX { get; set; }
     public float? MapPositionY { get; set; }
     public IReadOnlyCollection<Reservation> Reservations => _reservations.AsReadOnly();
+    public IReadOnlyCollection<ClassroomAccessory> ClassroomAccessories => _classroomAccessories.AsReadOnly();
 
     private Classroom() { }
 

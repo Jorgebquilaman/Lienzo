@@ -32,6 +32,8 @@ public class UnitOfWork : IUnitOfWork
     public IRepository<KeyDelivery> KeyDeliveries { get; }
     public IRepository<Accessory> Accessories { get; }
     public IRepository<ProcessedEmail> ProcessedEmails { get; }
+    public IRepository<ClassroomAccessory> ClassroomAccessories { get; }
+    public IRepository<ReservationAccessory> ReservationAccessories { get; }
 
     public UnitOfWork(
         LienzoDbContext context,
@@ -71,6 +73,8 @@ public class UnitOfWork : IUnitOfWork
         KeyDeliveries = new GenericRepository<KeyDelivery>(context);
         Accessories = new GenericRepository<Accessory>(context);
         ProcessedEmails = new GenericRepository<ProcessedEmail>(context);
+        ClassroomAccessories = new GenericRepository<ClassroomAccessory>(context);
+        ReservationAccessories = new GenericRepository<ReservationAccessory>(context);
     }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

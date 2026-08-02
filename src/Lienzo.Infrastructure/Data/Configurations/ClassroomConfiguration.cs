@@ -79,6 +79,11 @@ public class ClassroomConfiguration : IEntityTypeConfiguration<Classroom>
             .HasForeignKey(e => e.ClassroomId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.HasMany(e => e.ClassroomAccessories)
+            .WithOne(e => e.Classroom)
+            .HasForeignKey(e => e.ClassroomId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         builder.HasIndex(e => e.Name)
             .HasDatabaseName("ix_aulas_nombre");
 

@@ -32,6 +32,11 @@ public class ApproveReservationCommandHandler : IRequestHandler<ApproveReservati
         if (reservation is null)
             return Result<ReservationDto>.Failure("Reservation not found", "NOT_FOUND");
 
+        if (reservation.RequiresAccessoryConfirmation && !reservation.AccessoriesConfirmedAt.HasValue)
+            return Result<ReservationDto>.Failure(
+                "La confirmación de accesorios aún no fue recibida. Esperá a que el solicitante confirme por email los accesorios que necesita.",
+                "ACCESSORY_CONFIRMATION_PENDING");
+
         try
         {
             reservation.Approve(_currentUser.UserId);

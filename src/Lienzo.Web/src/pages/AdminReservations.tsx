@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Search, CheckCircle, XCircle, Filter, Plus, Repeat, ArrowUpDown, ArrowUp, ArrowDown, CalendarX2, FileDown, CheckCheck, X } from 'lucide-react';
+import { Search, CheckCircle, XCircle, Filter, Plus, Repeat, ArrowUpDown, ArrowUp, ArrowDown, CalendarX2, FileDown, CheckCheck, X, Package, Mail, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -9,9 +9,9 @@ import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/Table';
 import { TableSkeleton } from '@/components/ui/Skeleton';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/Dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from '@/components/ui/Dialog';
 import { getStatusLabel, getStatusColor, formatDateTime } from '@/lib/utils';
-import type { Reservation, PaginatedResponse } from '@/types';
+import type { Reservation, PaginatedResponse, ClassroomAccessory, ReservationAccessoriesResponse } from '@/types';
 
 export default function AdminReservations() {
   const [search, setSearch] = useState('');
@@ -80,6 +80,63 @@ export default function AdminReservations() {
     mutationFn: (id: string) => api.patch(`/reservations/${id}/reject`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adminReservations'] }),
   });
+
+  const [approveWithAccessories, setApproveWithAccessories] = useState<Reservation | null>(null);
+  const [accessoryData, setAccessoryData] = useState<ReservationAccessoriesResponse | null>(null);
+  const [accessoryDecisions, setAccessoryDecisions] = useState<Record<string, boolean>>({});
+  const [loadingAccessories, setLoadingAccessories] = useState(false);
+  const [resendingEmail, setResendingEmail] = useState(false);
+
+  const openApproveDialog = async (reservation: Reservation) => {
+    if (!reservation.requiresAccessoryConfirmation) {
+      approveMutation.mutate(reservation.id);
+      return;
+    }
+    setApproveWithAccessories(reservation);
+    setLoadingAccessories(true);
+    setAccessoryData(null);
+    setAccessoryDecisions({});
+    try {
+      const data = await api.get<ReservationAccessoriesResponse>(`/reservations/${reservation.id}/accessories`);
+      setAccessoryData(data);
+      const initial: Record<string, boolean> = {};
+      data.accessories.forEach((a) => {
+        if (a.isRequested) initial[a.name] = a.isGranted ?? true;
+      });
+      setAccessoryDecisions(initial);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error al cargar los accesorios');
+    } finally {
+      setLoadingAccessories(false);
+    }
+  };
+
+  const confirmApproveWithAccessories = async () => {
+    if (!approveWithAccessories || !accessoryData) return;
+    const requested = accessoryData.accessories.filter((a) => a.isRequested);
+    const decisions = requested.map((a) => ({ name: a.name, granted: accessoryDecisions[a.name] ?? true }));
+    try {
+      if (decisions.length > 0) {
+        await api.post(`/reservations/${approveWithAccessories.id}/accessories/decide`, decisions);
+      }
+      await approveMutation.mutateAsync(approveWithAccessories.id);
+      setApproveWithAccessories(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error al aprobar la reserva');
+    }
+  };
+
+  const resendConfirmationEmail = async (id: string) => {
+    setResendingEmail(true);
+    try {
+      await api.post(`/reservations/${id}/accessories/resend`);
+      alert('Correo de confirmación reenviado');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error al reenviar el correo');
+    } finally {
+      setResendingEmail(false);
+    }
+  };
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [confirmAllAction, setConfirmAllAction] = useState<'approve' | 'reject' | null>(null);
@@ -352,21 +409,52 @@ export default function AdminReservations() {
                     </span>
                   </TableCell>
                   <TableCell>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(reservation.status)}`}>
-                      {getStatusLabel(reservation.status)}
-                    </span>
+                    <div className="flex flex-col gap-1">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium w-fit ${getStatusColor(reservation.status)}`}>
+                        {getStatusLabel(reservation.status)}
+                      </span>
+                      {reservation.status === 'Pending' && reservation.requiresAccessoryConfirmation && (
+                        <span
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium w-fit bg-amber-100 text-amber-800"
+                          title={reservation.accessoriesConfirmedAt ? 'El solicitante confirmó los accesorios' : 'Esperando que el solicitante confirme los accesorios por email'}
+                        >
+                          <Package className="h-3 w-3" />
+                          {reservation.accessoriesConfirmedAt ? 'Accesorios confirmados' : 'Esperando confirmación de accesorios'}
+                        </span>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-1">
                       {reservation.status === 'Pending' && (
                         <>
-                          <button
-                            className="p-1.5 rounded-md text-green-600 hover:bg-green-50"
-                            onClick={() => approveMutation.mutate(reservation.id)}
-                            title="Aprobar"
-                          >
-                            <CheckCircle className="h-4 w-4" />
-                          </button>
+                          {reservation.requiresAccessoryConfirmation && !reservation.accessoriesConfirmedAt ? (
+                            <>
+                              <button
+                                className="p-1.5 rounded-md text-amber-600 hover:bg-amber-50"
+                                onClick={() => resendConfirmationEmail(reservation.id)}
+                                title="Reenviar correo de confirmación de accesorios"
+                                disabled={resendingEmail}
+                              >
+                                {resendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                              </button>
+                              <button
+                                className="p-1.5 rounded-md text-primary-300 cursor-not-allowed"
+                                title="El botón de aprobar estará disponible cuando el solicitante confirme los accesorios por email"
+                                disabled
+                              >
+                                <CheckCircle className="h-4 w-4" />
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              className="p-1.5 rounded-md text-green-600 hover:bg-green-50"
+                              onClick={() => openApproveDialog(reservation)}
+                              title="Aprobar"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                            </button>
+                          )}
                           <button
                             className="p-1.5 rounded-md text-red-600 hover:bg-red-50"
                             onClick={() => rejectMutation.mutate(reservation.id)}
@@ -450,6 +538,94 @@ export default function AdminReservations() {
               onClick={confirmAllAction === 'approve' ? bulkApproveAll : bulkRejectAll}
             >
               {confirmAllAction === 'approve' ? 'Aprobar todas' : 'Rechazar todas'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!approveWithAccessories} onOpenChange={(o) => { if (!o) setApproveWithAccessories(null); }}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Confirmar accesorios y aprobar</DialogTitle>
+            <DialogDescription>
+              {approveWithAccessories?.title} · {approveWithAccessories?.classroomName}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody className="space-y-4">
+            {loadingAccessories ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-primary-400" />
+              </div>
+            ) : accessoryData && accessoryData.accessories.length > 0 ? (
+              <>
+                <p className="text-sm text-primary-600">
+                  El solicitante pidió los siguientes accesorios. Marcá cuáles se le pueden entregar:
+                </p>
+                <div className="space-y-2">
+                  {accessoryData.accessories.map((acc) => {
+                    const isRequested = acc.isRequested;
+                    return (
+                      <div
+                        key={acc.name}
+                        className={`flex items-center justify-between p-3 rounded-xl border ${
+                          isRequested ? 'border-amber-300 bg-amber-50' : 'border-primary-100 bg-primary-50/50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Package className={`h-4 w-4 ${isRequested ? 'text-amber-600' : 'text-primary-300'}`} />
+                          <div>
+                            <span className="text-sm font-medium text-primary-800">{acc.name}</span>
+                            {isRequested && (
+                              <span className="block text-xs text-amber-700">Solicitado por el usuario</span>
+                            )}
+                          </div>
+                        </div>
+                        {isRequested && (
+                          <div className="flex items-center gap-1">
+                            <button
+                              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                accessoryDecisions[acc.name] !== false
+                                  ? 'bg-green-600 text-white'
+                                  : 'bg-primary-100 text-primary-500 hover:bg-primary-200'
+                              }`}
+                              onClick={() => setAccessoryDecisions((prev) => ({ ...prev, [acc.name]: true }))}
+                            >
+                              Confirmar
+                            </button>
+                            <button
+                              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                accessoryDecisions[acc.name] === false
+                                  ? 'bg-red-600 text-white'
+                                  : 'bg-primary-100 text-primary-500 hover:bg-primary-200'
+                              }`}
+                              onClick={() => setAccessoryDecisions((prev) => ({ ...prev, [acc.name]: false }))}
+                            >
+                              Desestimar
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-primary-500">
+                {accessoryData?.confirmed
+                  ? 'El solicitante confirmó los accesorios pero no pidió ninguno. Podés aprobar la reserva.'
+                  : 'No hay accesorios asociados.'}
+              </p>
+            )}
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApproveWithAccessories(null)}>Cancelar</Button>
+            <Button
+              loading={approveMutation.isPending}
+              onClick={confirmApproveWithAccessories}
+              disabled={loadingAccessories}
+            >
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Aprobar reserva
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -64,6 +64,7 @@ export interface Classroom {
   imageUrl?: string;
   mapPositionX?: number;
   mapPositionY?: number;
+  accessoryIds?: string[];
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -92,6 +93,23 @@ export interface Reservation {
   actividadCarrera?: string;
   actividadDocentes?: string;
   actividadDocenteIds?: string[];
+  requiresAccessoryConfirmation?: boolean;
+  accessoriesConfirmedAt?: string | null;
+  accessories?: { name: string; origin: string; isRequested: boolean; isGranted: boolean | null }[];
+}
+
+export interface ClassroomAccessory {
+  name: string;
+  origin: string;
+  isRequested: boolean;
+  isGranted: boolean | null;
+}
+
+export interface ReservationAccessoriesResponse {
+  reservationId: string;
+  requiresConfirmation: boolean;
+  confirmed: boolean;
+  accessories: ClassroomAccessory[];
 }
 
 export interface Announcement {

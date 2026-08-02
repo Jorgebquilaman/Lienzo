@@ -1,9 +1,11 @@
 using AutoMapper;
 using Lienzo.Application.Common.Models;
 using Lienzo.Application.DTOs;
+using Lienzo.Domain.Entities;
 using Lienzo.Domain.Enums;
 using Lienzo.Domain.Interfaces;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace Lienzo.Application.Commands.UpdateClassroom;
 
@@ -37,6 +39,23 @@ public class UpdateClassroomCommandHandler : IRequestHandler<UpdateClassroomComm
 
         classroom.UpdateDetails(name, floor, capacity, type, features, request.ImageUrl ?? classroom.ImageUrl);
         _unitOfWork.Classrooms.Update(classroom);
+
+        if (request.AccessoryIds is not null)
+        {
+            var existing = await _unitOfWork.ClassroomAccessories.Query()
+                .Where(ca => ca.ClassroomId == command.Id)
+                .ToListAsync(cancellationToken);
+            foreach (var item in existing)
+                _unitOfWork.ClassroomAccessories.Delete(item);
+
+            var accessoryIds = request.AccessoryIds.Distinct().ToList();
+            var validAccessories = await _unitOfWork.Accessories.Query()
+                .Where(a => accessoryIds.Contains(a.Id) && a.IsActive)
+                .ToListAsync(cancellationToken);
+            foreach (var accessory in validAccessories)
+                await _unitOfWork.ClassroomAccessories.AddAsync(new ClassroomAccessory(command.Id, accessory.Id));
+        }
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         var dto = _mapper.Map<ClassroomDto>(classroom);

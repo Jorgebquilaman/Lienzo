@@ -8,6 +8,7 @@ import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
 import ResetPasswordPage from '@/pages/ResetPasswordPage';
+import ConfirmAccessoriesPage from '@/pages/ConfirmAccessoriesPage';
 import DashboardPage from '@/pages/DashboardPage';
 import ClassroomBrowser from '@/pages/ClassroomBrowser';
 import ClassroomDetail from '@/pages/ClassroomDetail';
@@ -55,6 +56,7 @@ export default function App() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/confirm-accessories" element={<ConfirmAccessoriesPage />} />
       <Route path="/tv" element={<TVDashboard />} />
 
       <Route element={<ProtectedRoute />}>

@@ -5,6 +5,7 @@ using Lienzo.Domain.Entities;
 using Lienzo.Domain.Enums;
 using Lienzo.Domain.Interfaces;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Lienzo.Application.Commands.CreateClassroom;
@@ -47,6 +48,17 @@ public class CreateClassroomCommandHandler : IRequestHandler<CreateClassroomComm
             command.Request.ImageUrl);
 
         await _unitOfWork.Classrooms.AddAsync(classroom);
+
+        if (command.Request.AccessoryIds is { Count: > 0 })
+        {
+            var accessoryIds = command.Request.AccessoryIds.Distinct().ToList();
+            var validAccessories = await _unitOfWork.Accessories.Query()
+                .Where(a => accessoryIds.Contains(a.Id) && a.IsActive)
+                .ToListAsync(cancellationToken);
+            foreach (var accessory in validAccessories)
+                await _unitOfWork.ClassroomAccessories.AddAsync(new ClassroomAccessory(classroom.Id, accessory.Id));
+        }
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         var dto = _mapper.Map<ClassroomDto>(classroom);

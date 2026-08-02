@@ -20,6 +20,7 @@ public abstract class BaseApiController : ControllerBase
             "VALIDATION" => UnprocessableEntity(new ProblemDetails { Title = result.Error, Status = 422 }),
             "FORBIDDEN" => StatusCode(403, new ProblemDetails { Title = result.Error, Status = 403 }),
             "CONFLICT" => Conflict(new ProblemDetails { Title = result.Error, Status = 409 }),
+            "ACCESSORY_CONFIRMATION_PENDING" => Conflict(new ProblemDetails { Title = result.Error, Status = 409 }),
             _ => BadRequest(new ProblemDetails { Title = result.Error, Status = 400 })
         };
     }

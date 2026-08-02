@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { CalendarCheck, XCircle, CheckCircle, Pencil, Repeat, Star, ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react';
+import { CalendarCheck, XCircle, CheckCircle, Pencil, Repeat, Star, ChevronLeft, ChevronRight, ArrowLeft, ClipboardCheck } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -148,6 +148,19 @@ export default function MyReservations() {
                               {getStatusLabel(reservation.status)}
                             </Badge>
                           </div>
+                          {reservation.status === 'Pending' && reservation.requiresAccessoryConfirmation && (
+                            <span
+                              className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1 w-fit"
+                              title={reservation.accessoriesConfirmedAt
+                                ? 'Confirmaste los accesorios'
+                                : 'Revisá tu correo electrónico: te enviamos un enlace para confirmar qué accesorios necesitás. Hasta que no confirmes, la reserva no puede ser aprobada.'}
+                            >
+                              <ClipboardCheck className="h-3.5 w-3.5" />
+                              {reservation.accessoriesConfirmedAt
+                                ? 'Accesorios confirmados'
+                                : 'Confirmá tus accesorios por email'}
+                            </span>
+                          )}
                           <p className="text-sm text-primary-500">
                             {reservation.classroomName}
                           </p>

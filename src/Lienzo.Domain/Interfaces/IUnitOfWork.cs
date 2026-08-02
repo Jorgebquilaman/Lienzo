@@ -25,5 +25,7 @@ public interface IUnitOfWork : IDisposable
     IRepository<KeyDelivery> KeyDeliveries { get; }
     IRepository<Accessory> Accessories { get; }
     IRepository<ProcessedEmail> ProcessedEmails { get; }
+    IRepository<ClassroomAccessory> ClassroomAccessories { get; }
+    IRepository<ReservationAccessory> ReservationAccessories { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

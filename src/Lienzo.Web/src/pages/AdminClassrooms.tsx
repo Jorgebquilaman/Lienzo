@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, Search, Image, X, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Image, X, RefreshCw, ArrowUpDown, ArrowUp, ArrowDown, Package } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -39,6 +39,7 @@ export default function AdminClassrooms() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState('');
+  const [selectedAccessoryIds, setSelectedAccessoryIds] = useState<string[]>([]);
   const [syncResult, setSyncResult] = useState<{ creados: number; existentes: number; sinEdificio: number } | null>(null);
   const [sortKey, setSortKey] = useState<string>('name');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -81,6 +82,17 @@ export default function AdminClassrooms() {
     queryKey: ['buildings'],
     queryFn: () => api.get<Building[]>('/buildings'),
   });
+
+  const { data: accessories } = useQuery({
+    queryKey: ['accessories'],
+    queryFn: () => api.get<{ id: string; name: string }[]>('/accessories'),
+  });
+
+  const toggleAccessory = (id: string) => {
+    setSelectedAccessoryIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
 
   const form = useForm<ClassroomFormData>({
     resolver: zodResolver(classroomSchema),
@@ -131,6 +143,7 @@ export default function AdminClassrooms() {
   const openCreateDialog = () => {
     setEditingClassroom(null);
     setPreviewUrl('');
+    setSelectedAccessoryIds([]);
     form.reset({
       name: '',
       code: '',
@@ -148,6 +161,7 @@ export default function AdminClassrooms() {
   const openEditDialog = (classroom: Classroom) => {
     setEditingClassroom(classroom);
     setPreviewUrl(classroom.imageUrl || '');
+    setSelectedAccessoryIds(classroom.accessoryIds || []);
     form.reset({
       name: classroom.name,
       code: classroom.code || '',
@@ -168,6 +182,7 @@ export default function AdminClassrooms() {
         ...data,
         imageUrl: data.imageUrl || null,
         features: data.features ? data.features.split(',').map((f) => f.trim()).filter(Boolean) : [],
+        accessoryIds: selectedAccessoryIds,
       };
       if (editingClassroom) {
         return api.put(`/classrooms/${editingClassroom.id}`, payload);
@@ -344,6 +359,39 @@ export default function AdminClassrooms() {
               ]} />
               <Textarea label="Descripción" {...form.register('description')} />
               <Input label="Características (separadas por coma)" placeholder="proyector, wifi, aire acondicionado" {...form.register('features')} />
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-1.5">
+                  Accesorios disponibles (catálogo de Bedelía)
+                </label>
+                {!accessories || accessories.length === 0 ? (
+                  <p className="text-xs text-primary-400">
+                    No hay accesorios en el catálogo. Cargalos desde <strong>Administración → Accesorios</strong> para poder asignarlos a esta aula.
+                  </p>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto border border-primary-200 rounded-lg p-3">
+                    {accessories.map((acc) => (
+                      <label
+                        key={acc.id}
+                        className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${
+                          selectedAccessoryIds.includes(acc.id) ? 'bg-accent-50' : 'hover:bg-primary-50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 text-accent-600 rounded border-primary-300"
+                          checked={selectedAccessoryIds.includes(acc.id)}
+                          onChange={() => toggleAccessory(acc.id)}
+                        />
+                        <Package className="h-4 w-4 text-primary-400" />
+                        <span className="text-sm text-primary-700">{acc.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+                <p className="text-xs text-primary-400 mt-1">
+                  Al crear una reserva en esta aula se pedirá al solicitante que confirme por email qué accesorios necesita.
+                </p>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-primary-700 mb-1.5">Imagen</label>
                 {previewUrl ? (

@@ -24,6 +24,11 @@ public class Reservation : BaseEntity
     public string? SourceEmailSubject { get; private set; }
     public DateTime? SourceEmailDate { get; private set; }
     public string? EvidenceFilePath { get; private set; }
+    public bool RequiresAccessoryConfirmation { get; private set; }
+    public string? AccessoryConfirmationToken { get; private set; }
+    public DateTime? AccessoriesConfirmedAt { get; private set; }
+    private readonly List<ReservationAccessory> _reservationAccessories = [];
+    public IReadOnlyCollection<ReservationAccessory> ReservationAccessories => _reservationAccessories.AsReadOnly();
 
     private Reservation() { }
 
@@ -150,8 +155,46 @@ public class Reservation : BaseEntity
             DateTime.UtcNow));
     }
 
-    public void UpdateDetails(string title, string? description)
+    public void RequireAccessoryConfirmation(string token, IEnumerable<(string Name, AccessoryOrigin Origin)> accessories)
     {
+        RequiresAccessoryConfirmation = true;
+        AccessoryConfirmationToken = token;
+        _reservationAccessories.Clear();
+        foreach (var (name, origin) in accessories)
+        {
+            _reservationAccessories.Add(new ReservationAccessory(Id, name, origin));
+        }
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ConfirmAccessories(IEnumerable<string> requestedNames)
+    {
+        if (!RequiresAccessoryConfirmation || string.IsNullOrEmpty(AccessoryConfirmationToken))
+            throw new InvalidOperationException("Esta reserva no requiere confirmación de accesorios.");
+
+        if (AccessoriesConfirmedAt.HasValue)
+            throw new InvalidOperationException("La confirmación de accesorios ya fue recibida.");
+
+        foreach (var accessory in _reservationAccessories)
+        {
+            if (requestedNames.Contains(accessory.Name))
+                accessory.Request();
+        }
+
+        AccessoriesConfirmedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void DecideAccessory(string name, bool granted)
+    {
+        var accessory = _reservationAccessories.FirstOrDefault(a => a.Name == name);
+        if (accessory is null)
+            throw new ArgumentException($"El accesorio '{name}' no pertenece a esta reserva.");
+        accessory.Decide(granted);
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void UpdateDetails(string title, string? description)    {
         if (Status != ReservationStatus.Pending)
             throw new InvalidOperationException("Only pending reservations can be updated.");
 

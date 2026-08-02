@@ -76,6 +76,17 @@ public class ReservationConfiguration : IEntityTypeConfiguration<Reservation>
             .HasColumnName("email_evidencia_path")
             .HasMaxLength(500);
 
+        builder.Property(e => e.RequiresAccessoryConfirmation)
+            .HasColumnName("requiere_confirmacion_accesorios")
+            .IsRequired();
+
+        builder.Property(e => e.AccessoryConfirmationToken)
+            .HasColumnName("token_confirmacion_accesorios")
+            .HasMaxLength(100);
+
+        builder.Property(e => e.AccessoriesConfirmedAt)
+            .HasColumnName("confirmacion_accesorios_recibida_en");
+
         builder.Property(e => e.CreatedAt)
             .HasColumnName("creado_en")
             .IsRequired();
@@ -95,6 +106,11 @@ public class ReservationConfiguration : IEntityTypeConfiguration<Reservation>
             .WithMany(e => e.Reservations)
             .HasForeignKey(e => e.ClassroomId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasMany(e => e.ReservationAccessories)
+            .WithOne(e => e.Reservation)
+            .HasForeignKey(e => e.ReservationId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasIndex(e => e.ClassroomId)
             .HasDatabaseName("ix_reservas_aula_id");

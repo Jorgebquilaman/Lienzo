@@ -47,6 +47,8 @@ public class LienzoDbContext : IdentityDbContext<ApplicationUser, IdentityRole<G
     public DbSet<Receso> Recesos => Set<Receso>();
     public DbSet<KeyDeliveryAccessory> KeyDeliveryAccessories => Set<KeyDeliveryAccessory>();
     public DbSet<ProcessedEmail> ProcessedEmails => Set<ProcessedEmail>();
+    public DbSet<ClassroomAccessory> ClassroomAccessories => Set<ClassroomAccessory>();
+    public DbSet<ReservationAccessory> ReservationAccessories => Set<ReservationAccessory>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -76,6 +78,8 @@ public class LienzoDbContext : IdentityDbContext<ApplicationUser, IdentityRole<G
         builder.Entity<KeyDelivery>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<Receso>().HasQueryFilter(e => !e.IsDeleted);
         builder.Entity<ProcessedEmail>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<ClassroomAccessory>().HasQueryFilter(e => !e.IsDeleted);
+        builder.Entity<ReservationAccessory>().HasQueryFilter(e => !e.IsDeleted);
     }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

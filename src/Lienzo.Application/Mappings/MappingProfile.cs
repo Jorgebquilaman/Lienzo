@@ -14,21 +14,35 @@ public class MappingProfile : Profile
 
         CreateMap<Classroom, ClassroomDto>()
             .ForMember(d => d.BuildingName, o => o.MapFrom(s => s.Building.Name))
-            .ForMember(d => d.Type, o => o.MapFrom(s => s.Type.ToString()));
+            .ForMember(d => d.Type, o => o.MapFrom(s => s.Type.ToString()))
+            .ForMember(d => d.AccessoryIds, o => o.MapFrom(s =>
+                s.ClassroomAccessories
+                    .Where(ca => ca.Accessory != null && ca.Accessory.IsActive)
+                    .Select(ca => ca.AccessoryId)
+                    .ToList()));
 
         CreateMap<Classroom, ClassroomDetailDto>()
             .ForMember(d => d.BuildingName, o => o.MapFrom(s => s.Building.Name))
-            .ForMember(d => d.Type, o => o.MapFrom(s => s.Type.ToString()));
+            .ForMember(d => d.Type, o => o.MapFrom(s => s.Type.ToString()))
+            .ForMember(d => d.AccessoryNames, o => o.MapFrom(s =>
+                s.ClassroomAccessories
+                    .Where(ca => ca.Accessory != null && ca.Accessory.IsActive)
+                    .Select(ca => ca.Accessory.Name)
+                    .ToList()));
 
         CreateMap<Classroom, ClassroomSummaryDto>()
             .ForMember(d => d.Type, o => o.MapFrom(s => s.Type.ToString()));
+
+        CreateMap<ReservationAccessory, ReservationAccessoryDto>()
+            .ForMember(d => d.Origin, o => o.MapFrom(s => s.Origin.ToString()));
 
         CreateMap<Reservation, ReservationDto>()
             .ForMember(d => d.ClassroomName, o => o.MapFrom(s => s.Classroom.Name))
             .ForMember(d => d.BuildingName, o => o.MapFrom(s => s.Classroom.Building != null ? s.Classroom.Building.Name : null))
             .ForMember(d => d.Status, o => o.MapFrom(s => s.Status.ToString()))
             .ForMember(d => d.Date, o => o.MapFrom(s => s.Date.ToDateTime(TimeOnly.MinValue)))
-            .ForMember(d => d.ActividadId, o => o.MapFrom(s => s.ActividadId));
+            .ForMember(d => d.ActividadId, o => o.MapFrom(s => s.ActividadId))
+            .ForMember(d => d.Accessories, o => o.MapFrom(s => s.ReservationAccessories.ToList()));
 
         CreateMap<Announcement, AnnouncementDto>()
             .ForMember(d => d.Type, o => o.MapFrom(s => s.Type.ToString()))

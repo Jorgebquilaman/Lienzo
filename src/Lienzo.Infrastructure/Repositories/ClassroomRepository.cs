@@ -19,7 +19,11 @@ public class ClassroomRepository : GenericRepository<Classroom>, IClassroomRepos
 
     public override async Task<IEnumerable<Classroom>> GetAllAsync()
     {
-        return await DbSet.Include(c => c.Building).ToListAsync();
+        return await DbSet
+            .Include(c => c.Building)
+            .Include(c => c.ClassroomAccessories)
+            .ThenInclude(ca => ca.Accessory)
+            .ToListAsync();
     }
 
     public async Task<IEnumerable<Classroom>> GetAvailableAsync(
@@ -73,6 +77,8 @@ public class ClassroomRepository : GenericRepository<Classroom>, IClassroomRepos
     {
         return await DbSet
             .Include(c => c.Reservations)
+            .Include(c => c.ClassroomAccessories)
+                .ThenInclude(ca => ca.Accessory)
             .FirstOrDefaultAsync(c => c.Id == id);
     }
 }

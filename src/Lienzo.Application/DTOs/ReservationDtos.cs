@@ -25,6 +25,9 @@ public class ReservationDto
     public string? ActividadDocentes { get; set; }
     public List<string>? ActividadDocenteIds { get; set; }
     public string? EvidenceFilePath { get; set; }
+    public bool RequiresAccessoryConfirmation { get; set; }
+    public DateTime? AccessoriesConfirmedAt { get; set; }
+    public List<ReservationAccessoryDto>? Accessories { get; set; }
 }
 
 public record CreateReservationRequest(Guid ClassroomId, string Title, string? Description, DateOnly Date, TimeOnly StartTime, TimeOnly EndTime, string? DaysOfWeek = null, DateOnly? EndDate = null, Guid? ActividadId = null);
