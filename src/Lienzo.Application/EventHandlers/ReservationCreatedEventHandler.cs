@@ -73,22 +73,27 @@ public class ReservationCreatedEventHandler : INotificationHandler<ReservationCr
 
     private async Task SendReservationEmailAsync(Domain.Entities.Reservation reservation, CancellationToken ct)
     {
-        var classroomAccessories = reservation.Classroom.ClassroomAccessories
-            .Where(ca => ca.Accessory is { IsActive: true })
-            .Select(ca => (ca.Accessory.Name, AccessoryOrigin.Catalog))
-            .ToList();
+        var catalogAccessories = await _unitOfWork.Accessories.Query()
+            .Where(a => a.IsActive && !a.IsDeleted)
+            .OrderBy(a => a.Name)
+            .Select(a => new { a.Name, a.IsMovable })
+            .ToListAsync(ct);
 
         var featureAccessories = reservation.Classroom.Features
-            .Select(f => (f, AccessoryOrigin.Feature))
-            .ToList();
+            .Select(f => new { Name = f, IsMovable = false }).ToList();
 
-        var allAccessories = classroomAccessories.Concat(featureAccessories).ToList();
+        var allAccessories = catalogAccessories.Concat(featureAccessories).ToList();
         var hasAccessories = allAccessories.Count > 0;
 
         if (hasAccessories && !reservation.RequiresAccessoryConfirmation)
         {
             var token = Guid.NewGuid().ToString("N");
-            reservation.RequireAccessoryConfirmation(token, allAccessories);
+            var accessories = catalogAccessories
+                .Select(a => (a.Name, Origin: AccessoryOrigin.Catalog))
+                .Concat(featureAccessories
+                    .Select(f => (f.Name, Origin: AccessoryOrigin.Feature)))
+                .ToList();
+            reservation.RequireAccessoryConfirmation(token, accessories);
             await _unitOfWork.SaveChangesAsync(ct);
         }
 
@@ -118,7 +123,7 @@ public class ReservationCreatedEventHandler : INotificationHandler<ReservationCr
         if (hasAccessories)
         {
             subject = $"Confirmá los accesorios para tu reserva - {reservation.Classroom.Name}";
-            var listItems = string.Join("", allAccessories.Select(a => $"<li>{a.Item1}</li>"));
+            var listItems = string.Join("", allAccessories.Select(a => $"<li>{a.Name}</li>"));
             body = $"""
                 <h1>Reserva de aula - Lienzo</h1>
                 <p>Tu reserva para el <strong>{reservation.Date:dd/MM/yyyy}</strong> de {reservation.StartTime:hh\:mm} a {reservation.EndTime:hh\:mm} en <strong>{reservation.Classroom.Name}</strong> {(isApproved ? "fue autorizada" : "está pendiente de aprobación")}.</p>
@@ -155,7 +160,7 @@ public class ReservationCreatedEventHandler : INotificationHandler<ReservationCr
             EndTime = reservation.EndTime.ToString("hh\\:mm"),
             Status = isApproved ? "Autorizada" : "Pendiente",
             ReservationId = reservation.Id,
-            Accessories = allAccessories.Select(a => a.Item1).ToList()
+            Accessories = allAccessories.Select(a => a.Name).ToList()
         });
 
         var attachment = new Lienzo.Application.DTOs.EmailAttachment(

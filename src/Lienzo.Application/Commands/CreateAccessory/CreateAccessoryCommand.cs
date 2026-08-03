@@ -7,7 +7,7 @@ using MediatR;
 
 namespace Lienzo.Application.Commands.CreateAccessory;
 
-public record CreateAccessoryCommand(string Name, string? Description) : IRequest<Result<AccessoryDto>>;
+public record CreateAccessoryCommand(string Name, string? Description, bool IsMovable) : IRequest<Result<AccessoryDto>>;
 
 public class CreateAccessoryCommandHandler : IRequestHandler<CreateAccessoryCommand, Result<AccessoryDto>>
 {
@@ -23,10 +23,10 @@ public class CreateAccessoryCommandHandler : IRequestHandler<CreateAccessoryComm
         if (string.IsNullOrWhiteSpace(command.Name))
             return Result<AccessoryDto>.Failure("El nombre es requerido", "VALIDATION");
 
-        var accessory = new Accessory(command.Name.Trim(), command.Description?.Trim());
+        var accessory = new Accessory(command.Name.Trim(), command.Description?.Trim(), command.IsMovable);
         await _unitOfWork.Accessories.AddAsync(accessory);
         await _unitOfWork.SaveChangesAsync(ct);
 
-        return Result<AccessoryDto>.Success(new AccessoryDto(accessory.Id, accessory.Name, accessory.Description, accessory.IsActive));
+        return Result<AccessoryDto>.Success(new AccessoryDto(accessory.Id, accessory.Name, accessory.Description, accessory.IsActive, accessory.IsMovable));
     }
 }

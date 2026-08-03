@@ -89,8 +89,6 @@ public class ReservationAccessoriesController : ControllerBase
         var reservation = await _unitOfWork.Reservations.Query()
             .Include(r => r.Classroom)
             .ThenInclude(c => c.Building)
-            .Include(r => r.Classroom.ClassroomAccessories)
-            .ThenInclude(ca => ca.Accessory)
             .Include(r => r.ReservationAccessories)
             .FirstOrDefaultAsync(r => r.Id == reservationId && !r.IsDeleted);
 
@@ -102,18 +100,19 @@ public class ReservationAccessoriesController : ControllerBase
 
         if (!reservation.RequiresAccessoryConfirmation)
         {
-            var classroomAccessories = reservation.Classroom.ClassroomAccessories
-                .Where(ca => ca.Accessory is { IsActive: true })
-                .Select(ca => (ca.Accessory.Name, Origin: Lienzo.Domain.Enums.AccessoryOrigin.Catalog))
-                .ToList();
+            var catalogAccessories = await _unitOfWork.Accessories.Query()
+                .Where(a => a.IsActive && !a.IsDeleted)
+                .OrderBy(a => a.Name)
+                .Select(a => a.Name)
+                .ToListAsync();
 
-            var featureAccessories = reservation.Classroom.Features
-                .Select(f => (f, Origin: Lienzo.Domain.Enums.AccessoryOrigin.Feature))
+            var allAccessories = catalogAccessories
+                .Select(name => (name, Origin: Lienzo.Domain.Enums.AccessoryOrigin.Catalog))
+                .Concat(reservation.Classroom.Features
+                    .Select(f => (f, Origin: Lienzo.Domain.Enums.AccessoryOrigin.Feature)))
                 .ToList();
-
-            var allAccessories = classroomAccessories.Concat(featureAccessories).ToList();
             if (allAccessories.Count == 0)
-                return BadRequest(new ProblemDetails { Title = "El aula no tiene accesorios configurados. Asigná accesorios al aula para poder enviar la confirmación.", Status = 400 });
+                return BadRequest(new ProblemDetails { Title = "No hay accesorios en el catálogo. Cargá accesorios en Admin para poder enviar la confirmación.", Status = 400 });
 
             reservation.RequireAccessoryConfirmation(Guid.NewGuid().ToString("N"), allAccessories);
             await _unitOfWork.SaveChangesAsync();

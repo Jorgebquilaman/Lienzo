@@ -69,7 +69,7 @@ public class DeliverKeyCommandHandler : IRequestHandler<DeliverKeyCommand, Resul
 
         var accessoryDtos = delivery.Accessories
             .Where(a => a.Accessory != null)
-            .Select(a => new AccessoryDto(a.Accessory.Id, a.Accessory.Name, a.Accessory.Description, a.Accessory.IsActive))
+            .Select(a => new AccessoryDto(a.Accessory.Id, a.Accessory.Name, a.Accessory.Description, a.Accessory.IsActive, a.Accessory.IsMovable))
             .ToList();
 
         var dto = new KeyDeliveryDto(

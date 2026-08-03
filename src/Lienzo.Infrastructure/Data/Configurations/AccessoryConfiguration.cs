@@ -25,6 +25,10 @@ public class AccessoryConfiguration : IEntityTypeConfiguration<Accessory>
             .HasColumnName("activo")
             .IsRequired();
 
+        builder.Property(e => e.IsMovable)
+            .HasColumnName("es_movil")
+            .IsRequired();
+
         builder.Property(e => e.CreatedAt).HasColumnName("creado_en").IsRequired();
         builder.Property(e => e.UpdatedAt).HasColumnName("actualizado_en").IsRequired();
         builder.Property(e => e.IsDeleted).HasColumnName("eliminado").IsRequired();

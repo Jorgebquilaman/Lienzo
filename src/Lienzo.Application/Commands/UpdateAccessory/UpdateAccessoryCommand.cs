@@ -6,7 +6,7 @@ using MediatR;
 
 namespace Lienzo.Application.Commands.UpdateAccessory;
 
-public record UpdateAccessoryCommand(Guid Id, string Name, string? Description, bool IsActive) : IRequest<Result<AccessoryDto>>;
+public record UpdateAccessoryCommand(Guid Id, string Name, string? Description, bool IsActive, bool IsMovable) : IRequest<Result<AccessoryDto>>;
 
 public class UpdateAccessoryCommandHandler : IRequestHandler<UpdateAccessoryCommand, Result<AccessoryDto>>
 {
@@ -23,10 +23,10 @@ public class UpdateAccessoryCommandHandler : IRequestHandler<UpdateAccessoryComm
         if (accessory is null)
             return Result<AccessoryDto>.Failure("Accesorio no encontrado", "NOT_FOUND");
 
-        accessory.Update(command.Name.Trim(), command.Description?.Trim(), command.IsActive);
+        accessory.Update(command.Name.Trim(), command.Description?.Trim(), command.IsActive, command.IsMovable);
         _unitOfWork.Accessories.Update(accessory);
         await _unitOfWork.SaveChangesAsync(ct);
 
-        return Result<AccessoryDto>.Success(new AccessoryDto(accessory.Id, accessory.Name, accessory.Description, accessory.IsActive));
+        return Result<AccessoryDto>.Success(new AccessoryDto(accessory.Id, accessory.Name, accessory.Description, accessory.IsActive, accessory.IsMovable));
     }
 }

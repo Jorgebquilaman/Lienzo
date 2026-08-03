@@ -21,14 +21,14 @@ public class AccessoriesController : BaseApiController
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateAccessoryRequest request)
     {
-        var result = await Mediator.Send(new CreateAccessoryCommand(request.Name, request.Description));
+        var result = await Mediator.Send(new CreateAccessoryCommand(request.Name, request.Description, request.IsMovable));
         return HandleResult(result);
     }
 
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateAccessoryRequest request)
     {
-        var result = await Mediator.Send(new UpdateAccessoryCommand(id, request.Name, request.Description, request.IsActive));
+        var result = await Mediator.Send(new UpdateAccessoryCommand(id, request.Name, request.Description, request.IsActive, request.IsMovable));
         return HandleResult(result);
     }
 

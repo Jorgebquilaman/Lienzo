@@ -58,7 +58,7 @@ public class GetKeyDeliveryHistoryQueryHandler : IRequestHandler<GetKeyDeliveryH
             var cls = classrooms.GetValueOrDefault(d.ClassroomId);
             var accessories = d.Accessories?
                 .Where(a => a.Accessory != null)
-                .Select(a => new AccessoryDto(a.Accessory.Id, a.Accessory.Name, a.Accessory.Description, a.Accessory.IsActive))
+                .Select(a => new AccessoryDto(a.Accessory.Id, a.Accessory.Name, a.Accessory.Description, a.Accessory.IsActive, a.Accessory.IsMovable))
                 .ToList();
             return new KeyDeliveryDto(
                 d.Id, d.ClassroomId,

@@ -25,7 +25,7 @@ public class GetAllAccessoriesQueryHandler : IRequestHandler<GetAllAccessoriesQu
             .OrderBy(a => a.Name)
             .ToListAsync(ct);
 
-        var dtos = accessories.Select(a => new AccessoryDto(a.Id, a.Name, a.Description, a.IsActive)).ToList();
+        var dtos = accessories.Select(a => new AccessoryDto(a.Id, a.Name, a.Description, a.IsActive, a.IsMovable)).ToList();
         return Result<List<AccessoryDto>>.Success(dtos);
     }
 }
