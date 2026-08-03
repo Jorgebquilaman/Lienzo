@@ -13,25 +13,25 @@ public class MappingProfile : Profile
         CreateMap<Building, BuildingDetailDto>();
 
         CreateMap<Classroom, ClassroomDto>()
-            .ForMember(d => d.BuildingName, o => o.MapFrom(s => s.Building.Name))
-            .ForMember(d => d.Type, o => o.MapFrom(s => s.Type.ToString()))
-            .ForMember(d => d.AccessoryIds, o => o.MapFrom(s =>
+            .ForCtorParam(nameof(ClassroomDto.BuildingName), o => o.MapFrom(s => s.Building.Name))
+            .ForCtorParam(nameof(ClassroomDto.Type), o => o.MapFrom(s => s.Type.ToString()))
+            .ForCtorParam(nameof(ClassroomDto.AccessoryIds), o => o.MapFrom(s =>
                 s.ClassroomAccessories
                     .Where(ca => ca.Accessory != null && ca.Accessory.IsActive)
                     .Select(ca => ca.AccessoryId)
                     .ToList()));
 
         CreateMap<Classroom, ClassroomDetailDto>()
-            .ForMember(d => d.BuildingName, o => o.MapFrom(s => s.Building.Name))
-            .ForMember(d => d.Type, o => o.MapFrom(s => s.Type.ToString()))
-            .ForMember(d => d.AccessoryNames, o => o.MapFrom(s =>
+            .ForCtorParam(nameof(ClassroomDetailDto.BuildingName), o => o.MapFrom(s => s.Building.Name))
+            .ForCtorParam(nameof(ClassroomDetailDto.Type), o => o.MapFrom(s => s.Type.ToString()))
+            .ForCtorParam(nameof(ClassroomDetailDto.AccessoryNames), o => o.MapFrom(s =>
                 s.ClassroomAccessories
                     .Where(ca => ca.Accessory != null && ca.Accessory.IsActive)
                     .Select(ca => ca.Accessory.Name)
                     .ToList()));
 
         CreateMap<Classroom, ClassroomSummaryDto>()
-            .ForMember(d => d.Type, o => o.MapFrom(s => s.Type.ToString()));
+            .ForCtorParam(nameof(ClassroomSummaryDto.Type), o => o.MapFrom(s => s.Type.ToString()));
 
         CreateMap<ReservationAccessory, ReservationAccessoryDto>()
             .ForMember(d => d.Origin, o => o.MapFrom(s => s.Origin.ToString()));
