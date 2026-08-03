@@ -156,7 +156,7 @@ public class CreateReservationFromEmailCommandHandler : IRequestHandler<CreateRe
                     command.Request.EmailUid,
                     email.From,
                     email.Subject,
-                    email.Date.ToUniversalTime().DateTime,
+                    email.Date.UtcDateTime,
                     evidencePath);
 
                 await _unitOfWork.Reservations.AddAsync(reservation);

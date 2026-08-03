@@ -74,10 +74,21 @@ public class EmailReaderService : IEmailReaderService
             using var client = await ConnectAsync(host, port, username, password, FolderAccess.ReadOnly);
 
             var allUids = await client.Inbox.SearchAsync(SearchQuery.All, ct);
-            allUids = allUids.Reverse().ToList();
-            var total = allUids.Count;
+
+            var allSummaries = await client.Inbox.FetchAsync(
+                allUids,
+                MessageSummaryItems.UniqueId | MessageSummaryItems.Envelope,
+                ct);
+
+            var orderedUids = allSummaries
+                .OrderByDescending(m => m.Envelope?.Date ?? DateTimeOffset.MinValue)
+                .ThenByDescending(m => m.UniqueId)
+                .Select(m => m.UniqueId)
+                .ToList();
+
+            var total = orderedUids.Count;
             var skip = (page - 1) * pageSize;
-            var pageUids = allUids.Skip(skip).Take(pageSize).ToList();
+            var pageUids = orderedUids.Skip(skip).Take(pageSize).ToList();
 
             if (pageUids.Count == 0)
                 return Result<PaginatedResult<EmailMessageSummaryDto>>.Success(
