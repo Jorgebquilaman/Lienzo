@@ -32,7 +32,7 @@ public class ReservationDto
 
 public record CreateReservationRequest(Guid ClassroomId, string Title, string? Description, DateOnly Date, TimeOnly StartTime, TimeOnly EndTime, string? DaysOfWeek = null, DateOnly? EndDate = null, Guid? ActividadId = null);
 
-public record CreateReservationFromEmailRequest(string EmailUid, Guid AssignedUserId, Guid ClassroomId, string Title, string? Description, DateOnly Date, TimeOnly StartTime, TimeOnly EndTime, string? DaysOfWeek = null, DateOnly? EndDate = null, Guid? ActividadId = null);
+public record CreateReservationFromEmailRequest(string EmailUid, Guid AssignedUserId, Guid ClassroomId, string Title, string? Description, DateOnly Date, TimeOnly StartTime, TimeOnly EndTime, string? DaysOfWeek = null, DateOnly? EndDate = null, Guid? ActividadId = null, bool RequestAccessoryConfirmation = false);
 
 public record UpdateReservationRequest(string? Title, string? Description);
 

@@ -58,6 +58,7 @@ export default function AdminEmails() {
   const pageSize = 20;
   const [selected, setSelected] = useState<EmailDetail | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [createMode, setCreateMode] = useState<'create' | 'pending' | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [resending, setResending] = useState(false);
 
@@ -203,14 +204,24 @@ export default function AdminEmails() {
               {selected && (
                 <div className="flex items-center gap-2">
                   {!selected.isProcessed && (
-                    <Button
-                      variant="accent"
-                      size="sm"
-                      onClick={() => setShowCreate(true)}
-                    >
-                      <CalendarPlus className="h-4 w-4 mr-1" />
-                      Crear Reserva
-                    </Button>
+                    <>
+                      <Button
+                        variant="accent"
+                        size="sm"
+                        onClick={() => { setCreateMode('create'); setShowCreate(true); }}
+                      >
+                        <CalendarPlus className="h-4 w-4 mr-1" />
+                        Crear Reserva
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => { setCreateMode('pending'); setShowCreate(true); }}
+                      >
+                        <ClipboardCheck className="h-4 w-4 mr-1" />
+                        Crear y pedir accesorios
+                      </Button>
+                    </>
                   )}
                   {selected.isProcessed && selected.reservationId && !selected.accessoriesConfirmed && (
                     <Button
@@ -274,13 +285,15 @@ export default function AdminEmails() {
         </Card>
       </div>
 
-      {selected && (
+      {selected && createMode && (
         <CreateReservationDialog
           open={showCreate}
           onOpenChange={setShowCreate}
           email={selected}
+          requestAccessoryConfirmation={createMode === 'pending'}
           onSuccess={() => {
             setShowCreate(false);
+            setCreateMode(null);
             setSelected(null);
             queryClient.invalidateQueries({ queryKey: ['emails'] });
           }}
@@ -290,10 +303,11 @@ export default function AdminEmails() {
   );
 }
 
-function CreateReservationDialog({ open, onOpenChange, email, onSuccess }: {
+function CreateReservationDialog({ open, onOpenChange, email, requestAccessoryConfirmation, onSuccess }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   email: EmailDetail;
+  requestAccessoryConfirmation: boolean;
   onSuccess: () => void;
 }) {
   const [assignedUserId, setAssignedUserId] = useState('');
@@ -325,9 +339,12 @@ function CreateReservationDialog({ open, onOpenChange, email, onSuccess }: {
         date,
         startTime,
         endTime,
+        requestAccessoryConfirmation,
       }),
     onSuccess: () => {
-      alert('Reserva creada correctamente con evidencia del correo');
+      alert(requestAccessoryConfirmation
+        ? 'Se creó la reserva como pendiente y se envió el correo al solicitante para confirmar los accesorios.'
+        : 'Reserva creada correctamente con evidencia del correo');
       onSuccess();
     },
     onError: (err: any) => {
@@ -341,9 +358,11 @@ function CreateReservationDialog({ open, onOpenChange, email, onSuccess }: {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Crear Reserva desde Correo</DialogTitle>
+          <DialogTitle>{requestAccessoryConfirmation ? 'Crear Reserva y Confirmar Accesorios' : 'Crear Reserva desde Correo'}</DialogTitle>
           <DialogDescription>
-            La reserva quedará vinculada al correo como evidencia legal
+            {requestAccessoryConfirmation
+              ? 'La reserva quedará pendiente hasta que el solicitante confirme los accesorios'
+              : 'La reserva quedará vinculada al correo como evidencia legal'}
           </DialogDescription>
         </DialogHeader>
         <DialogBody className="space-y-4">
@@ -412,7 +431,7 @@ function CreateReservationDialog({ open, onOpenChange, email, onSuccess }: {
             disabled={!canSubmit}
             loading={mutation.isPending}
           >
-            Crear Reserva
+            {requestAccessoryConfirmation ? 'Crear y Pedir Accesorios' : 'Crear Reserva'}
           </Button>
         </DialogFooter>
       </DialogContent>
