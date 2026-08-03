@@ -311,6 +311,7 @@ function CreateReservationDialog({ open, onOpenChange, email, requestAccessoryCo
   onSuccess: () => void;
 }) {
   const [assignedUserId, setAssignedUserId] = useState('');
+  const [buildingId, setBuildingId] = useState('');
   const [classroomId, setClassroomId] = useState('');
   const [title, setTitle] = useState(email.subject || '');
   const [description, setDescription] = useState(email.bodyText || '');
@@ -323,9 +324,18 @@ function CreateReservationDialog({ open, onOpenChange, email, requestAccessoryCo
     queryFn: () => api.get<AdminUser[]>('/users'),
   });
 
+  const { data: buildings } = useQuery({
+    queryKey: ['buildings'],
+    queryFn: () => api.get<{ id: string; name: string }[]>('/buildings'),
+  });
+
   const { data: classrooms } = useQuery({
-    queryKey: ['classrooms', 'active'],
-    queryFn: () => api.get<Classroom[]>('/classrooms'),
+    queryKey: ['classrooms', 'active', buildingId],
+    queryFn: () => {
+      const params: Record<string, string> = {};
+      if (buildingId) params.buildingId = buildingId;
+      return api.get<Classroom[]>('/classrooms', params);
+    },
   });
 
   const mutation = useMutation({
@@ -379,6 +389,13 @@ function CreateReservationDialog({ open, onOpenChange, email, requestAccessoryCo
               value: u.id,
               label: `${u.firstName} ${u.lastName} (${u.role === 'Admin' ? 'Administrador' : u.role === 'Teacher' ? 'Profesor' : 'Estudiante'})`,
             }))}
+          />
+          <Select
+            label="Edificio"
+            placeholder={buildings?.length ? 'Seleccionar edificio' : 'Sin edificios'}
+            value={buildingId}
+            onValueChange={(v) => { setBuildingId(v); setClassroomId(''); }}
+            options={(buildings || []).map((b) => ({ value: b.id, label: b.name }))}
           />
           <Select
             label="Aula"
